@@ -9,6 +9,7 @@ import CameraControls from "./CameraControls";
 import AdventureWorld from "./minigames/AdventureWorld";
 import RealisticLighting from "./RealisticLighting";
 import { useGame } from "@/lib/village/store";
+import { useAdventure } from "@/lib/village/minigames/store";
 function ContextRecovery() {
   const router = useRouter(),
     gl = useThree((s) => s.gl);
@@ -24,38 +25,28 @@ function ContextRecovery() {
   return null;
 }
 export default function Scene() {
-  const quality = useGame((s) => s.quality);
+  const panel = useGame((s) => s.panel);
+  const activityModal = useAdventure(
+    (s) => !!s.activeGame && s.phase !== "playing",
+  );
+  const suspended = !!panel || activityModal;
   return (
     <Canvas
+      frameloop={suspended ? "demand" : "always"}
       orthographic
       camera={{ position: [38, 42, 38], zoom: 18, near: 0.1, far: 250 }}
-      dpr={
-        quality === "low"
-          ? 1
-          : quality === "high" || quality === "ultra"
-            ? [1, 2]
-            : [1, 1.5]
-      }
+      dpr={[1, 1.5]}
       shadows="percentage"
       gl={{
-        antialias: quality !== "low",
+        antialias: true,
         alpha: true,
         powerPreference: "high-performance",
-      }}
-      onCreated={({ gl }) => {
-        const context = gl.getContext();
-        const info = context.getExtension("WEBGL_debug_renderer_info");
-        const renderer = info
-          ? String(context.getParameter(info.UNMASKED_RENDERER_WEBGL))
-          : "";
-        if (/swiftshader|llvmpipe|software/i.test(renderer))
-          useGame.setState({ quality: "low" });
       }}
     >
       <ContextRecovery />
       <CameraControls />
       <Suspense fallback={null}>
-        <Physics timeStep={1 / 60} gravity={[0, -18, 0]}>
+        <Physics paused={suspended} timeStep={1 / 60} gravity={[0, -18, 0]}>
           <RealisticLighting />
           <World />
           <AdventureWorld />

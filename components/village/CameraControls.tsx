@@ -35,7 +35,9 @@ export default function CameraControls() {
           adventure.setTrialZoom((adventure.trialZoom * distance()) / before);
         else game.setZoom((game.zoom * distance()) / before);
       } else if (game.started && game.view === "first-person") {
-        cameraLook.yaw -= (event.clientX - previous.x) * 0.005;
+        cameraLook.yaw =
+          (cameraLook.yaw - (event.clientX - previous.x) * 0.005) %
+          (Math.PI * 2);
         cameraLook.pitch = clamp(
           cameraLook.pitch - (event.clientY - previous.y) * 0.005,
           -1.1,
@@ -84,7 +86,7 @@ export default function CameraControls() {
     };
   }, [canvas, view, started]);
   return started && view === "first-person" ? (
-    <PerspectiveCamera makeDefault fov={55} near={0.08} far={250} />
+    <PerspectiveCamera makeDefault fov={55} near={0.08} far={160} />
   ) : (
     <OrthographicCamera
       makeDefault

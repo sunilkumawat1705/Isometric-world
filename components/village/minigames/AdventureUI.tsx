@@ -10,6 +10,66 @@ import {
 } from "@/lib/village/minigames/course";
 import { requestRespawn, useAdventure } from "@/lib/village/minigames/store";
 import { releaseInput, useGame } from "@/lib/village/store";
+import { useLeaderboard } from "@/lib/village/minigames/leaderboard";
+function SaveRecord() {
+  const run = useAdventure((s) => s.completedRun);
+  const { records, save, load, error } = useLeaderboard();
+  const [name, setName] = useState("");
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    load();
+  }, [load]);
+  if (!run) return null;
+  const recorded = saved || records.some((r) => r.id === run.id);
+  return (
+    <form
+      className="save-record"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (save(run, name)) setSaved(true);
+      }}
+    >
+      {recorded ? (
+        <p role="status">
+          Record saved. Your run is on the village leaderboard.
+        </p>
+      ) : (
+        <>
+          <label htmlFor="runner-name">
+            Save your record · What’s your name?
+          </label>
+          <div className="save-record-fields">
+            <input
+              id="runner-name"
+              name="runnerName"
+              autoComplete="nickname"
+              maxLength={24}
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+            />
+            <button type="submit" disabled={!name.trim()}>
+              Save record
+            </button>
+          </div>
+          <small>
+            Optional. Records stay in this browser. You can leave without
+            saving.
+          </small>
+          {error && <p role="alert">{error}</p>}
+        </>
+      )}
+      <button
+        type="button"
+        className="record-board-link"
+        onClick={() => useGame.getState().open("leaderboard")}
+      >
+        View leaderboard
+      </button>
+    </form>
+  );
+}
 function Result() {
   const game = useAdventure((s) => s.activeGame),
     score = useAdventure((s) => s.score),
@@ -19,7 +79,8 @@ function Result() {
     hearts = useAdventure((s) => s.hearts),
     checkpoint = useAdventure((s) => s.checkpoint),
     phase = useAdventure((s) => s.phase),
-    failed = game === "parkour" && stars === 0;
+    completedRun = useAdventure((s) => s.completedRun),
+    failed = !completedRun;
   useEffect(() => {
     if (phase === "success") {
       const id = setTimeout(
@@ -51,6 +112,7 @@ function Result() {
           ))}
         </div>
       )}
+      {!failed && <SaveRecord key={completedRun?.id} />}
       {game === "parkour" && (
         <>
           {!failed && (
@@ -131,14 +193,14 @@ export default function AdventureUI() {
             onClick={() => setJournal(!journal)}
           >
             <Gem size={15} /> {s.collected.length}/8 <Trophy size={15} />{" "}
-            {s.achievements.length}/6{" "}
+            {s.achievements.length}/{Object.keys(achievementNames).length}{" "}
             <span>{journal ? "Close journal" : "Adventure journal"}</span>
           </button>
           {journal && (
             <div className="adventure-journal">
               <h3>Take a little detour</h3>
               <p>
-                Activities are optional. Walk to a sign and press E, or choose
+                Activities are optional. Walk to an activity and press E, or choose
                 one here.
               </p>
               {activities.map((a) => (
@@ -157,6 +219,18 @@ export default function AdventureUI() {
                   <span>{s.completedGames.includes(a.id) ? "✓" : "→"}</span>
                 </button>
               ))}
+              <button
+                onClick={() => {
+                  useGame.getState().open("leaderboard");
+                  setJournal(false);
+                }}
+              >
+                <span>
+                  Village leaderboard
+                  <small>Fastest jungle trial runs on this browser</small>
+                </span>
+                <Trophy size={18} />
+              </button>
               <div className="achievement-badges">
                 {Object.entries(achievementNames).map(([id, name]) => (
                   <span
@@ -177,7 +251,7 @@ export default function AdventureUI() {
           )}
         </aside>
       )}
-      {s.toast && (
+      {s.toast && !panel && (!s.activeGame || parkourLive) && (
         <div key={s.toastSerial} className="adventure-toast" role="status">
           <span>✦</span>
           {s.toast}

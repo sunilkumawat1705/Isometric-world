@@ -11,6 +11,7 @@ import {
 } from "@react-three/rapier";
 import * as THREE from "three";
 import { Box, Rock } from "./Primitives";
+import { VILLAGE_SPAWN, villageStepAllowed } from "@/lib/village/terrain";
 import { movement, type MovementState } from "@/lib/village/data";
 import { canJump, cameraMovement, nearestLocation } from "@/lib/village/logic";
 import {
@@ -74,7 +75,7 @@ function CharacterModel({
   limbs: React.RefObject<THREE.Group | null>;
 }) {
   return (
-    <group ref={visual} position={[0, -0.73, 0]}>
+    <group ref={visual} position={[0, -0.73, 0]} rotation={[0, Math.PI, 0]}>
       <group ref={limbs}>
         <group position={[-0.17, 0.3, 0]}>
           <Box color="#344653" scale={[0.23, 0.5, 0.27]} />
@@ -93,7 +94,7 @@ function CharacterModel({
           />
         </group>
         <group position={[-0.39, 0.9, 0]}>
-          <Box color="#476a4d" scale={[0.2, 0.55, 0.25]} />
+          <Box color="#59839a" scale={[0.2, 0.55, 0.25]} />
           <Rock
             color="#efc69d"
             position={[0, -0.25, 0]}
@@ -101,7 +102,7 @@ function CharacterModel({
           />
         </group>
         <group position={[0.39, 0.9, 0]}>
-          <Box color="#476a4d" scale={[0.2, 0.55, 0.25]} />
+          <Box color="#59839a" scale={[0.2, 0.55, 0.25]} />
           <Rock
             color="#efc69d"
             position={[0, -0.25, 0]}
@@ -109,7 +110,7 @@ function CharacterModel({
           />
         </group>
       </group>
-      <Box color="#648255" position={[0, 0.86, 0]} scale={[0.6, 0.66, 0.38]} />
+      <Box color="#59839a" position={[0, 0.86, 0]} scale={[0.6, 0.66, 0.38]} />
       <Box
         color="#253744"
         position={[0, 0.65, 0.02]}
@@ -143,21 +144,6 @@ function CharacterModel({
           scale={[0.035, 0.043, 0.025]}
         />
       ))}
-      <Box
-        color="#293f4f"
-        position={[0, 1.59, 0.05]}
-        scale={[0.67, 0.14, 0.56]}
-      />
-      <Box
-        color="#bec9c4"
-        position={[0, 1.59, 0.34]}
-        scale={[0.38, 0.12, 0.035]}
-      />
-      <Box
-        color="#364e43"
-        position={[0, 1.59, 0.365]}
-        scale={[0.065, 0.065, 0.015]}
-      />
     </group>
   );
 }
@@ -188,6 +174,8 @@ export default function Player() {
     const c = world.createCharacterController(0.025);
     c.enableAutostep(0.4, 0.2, true);
     c.enableSnapToGround(0.2);
+    c.setApplyImpulsesToDynamicBodies(true);
+    c.setCharacterMass(65);
     c.setMaxSlopeClimbAngle(Math.PI / 4);
     c.setMinSlopeSlideAngle(Math.PI / 3);
     controller.current = c;
@@ -357,6 +345,15 @@ export default function Player() {
     );
     const move = c.computedMovement(),
       p = rb.translation();
+    if (
+      p.x < ARENA_MIN_X &&
+      !villageStepAllowed(p.x, p.z, p.x + move.x, p.z + move.z)
+    ) {
+      // Slide along the bank instead of sticking when moving diagonally.
+      if (villageStepAllowed(p.x, p.z, p.x + move.x, p.z)) move.z = 0;
+      else if (villageStepAllowed(p.x, p.z, p.x, p.z + move.z)) move.x = 0;
+      else move.x = move.z = 0;
+    }
     rb.setNextKinematicTranslation({
       x: p.x + move.x,
       y: p.y + move.y,
@@ -436,11 +433,15 @@ export default function Player() {
       game.view === "first-person" &&
       camera instanceof THREE.PerspectiveCamera
     ) {
+      // Match the eye to physics immediately; smoothing here adds input latency.
       camera.position.set(p.x, p.y + 0.78, p.z);
       camera.rotation.set(cameraLook.pitch, cameraLook.yaw, 0, "YXZ");
       const fov = 85 - ((game.zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 30;
-      camera.fov += (fov - camera.fov) * (1 - Math.exp(-8 * delta));
-      camera.updateProjectionMatrix();
+      if (Math.abs(fov - camera.fov) > 0.01) {
+        camera.fov +=
+          (fov - camera.fov) * (1 - Math.exp(-8 * Math.min(delta, 0.1)));
+        camera.updateProjectionMatrix();
+      }
       return;
     }
     const framing = trialFraming(
@@ -485,8 +486,11 @@ export default function Player() {
         (game.started ? 1.32 : 0.3) *
         (inArena ? 1.12 : 1) *
         game.zoom;
-    ortho.zoom += (targetZoom - ortho.zoom) * (1 - Math.exp(-3 * delta));
-    ortho.updateProjectionMatrix();
+    if (Math.abs(targetZoom - ortho.zoom) > 0.01) {
+      ortho.zoom +=
+        (targetZoom - ortho.zoom) * (1 - Math.exp(-3 * Math.min(delta, 0.1)));
+      ortho.updateProjectionMatrix();
+    }
   });
   return (
     <RigidBody
@@ -494,7 +498,7 @@ export default function Player() {
       name="village-player"
       type="kinematicPosition"
       colliders={false}
-      position={[0, 0.85, 5]}
+      position={VILLAGE_SPAWN}
       enabledRotations={[false, false, false]}
     >
       <CapsuleCollider args={[0.4, 0.32]} />

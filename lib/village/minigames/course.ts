@@ -8,11 +8,11 @@ export const KILL_Y = -0.7;
 export const PLAYER_CENTER_OFFSET = 0.72;
 export const MAX_HEARTS = 5;
 export const INVULNERABLE_SECONDS = 1.6;
-export const ARENA_MIN_X = 30;
+export const ARENA_MIN_X = 60;
 export const SPRING_VELOCITY = 12.5;
 export const BOOST_SPEED = 12;
 export const BOOST_SECONDS = 0.85;
-export const RETURN_POSITION: V3 = [-7, 0.9, 9.4];
+export { PARKOUR_RETURN as RETURN_POSITION } from "./entrance";
 
 export type PlatformKind = "island" | "stone" | "plank";
 export interface Platform {

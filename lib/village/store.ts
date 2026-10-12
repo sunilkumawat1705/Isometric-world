@@ -1,6 +1,6 @@
+import { VILLAGE_SPAWN } from "./terrain";
 import { create } from "zustand";
 import type { MovementState, Section } from "./data";
-export type Quality = "low" | "medium" | "high" | "ultra";
 export const MIN_ZOOM = 0.75;
 export const MAX_ZOOM = 3;
 export type ViewMode = "birdseye" | "first-person";
@@ -8,13 +8,12 @@ export const cameraLook = { yaw: Math.PI / 4, pitch: 0 };
 interface GameState {
   started: boolean;
   ready: boolean;
-  panel: Section | "map" | "settings" | null;
+  panel: Section | "map" | "settings" | "leaderboard" | null;
   near: Section | null;
   visited: Section[];
   position: [number, number];
   elevation: number;
   motion: MovementState;
-  quality: Quality;
   reduced: boolean;
   zoom: number;
   view: ViewMode;
@@ -31,10 +30,9 @@ export const useGame = create<GameState>((set) => ({
   panel: null,
   near: null,
   visited: [],
-  position: [0, 5],
-  elevation: 0.85,
+  position: [VILLAGE_SPAWN[0], VILLAGE_SPAWN[2]],
+  elevation: VILLAGE_SPAWN[1],
   motion: "idle",
-  quality: "medium",
   reduced: false,
   zoom: MAX_ZOOM,
   view: "birdseye",
@@ -53,7 +51,7 @@ export const useGame = create<GameState>((set) => ({
       panel,
       visited:
         panel &&
-        !["map", "settings"].includes(panel) &&
+        !["map", "settings", "leaderboard"].includes(panel) &&
         !s.visited.includes(panel as Section)
           ? [...s.visited, panel as Section]
           : s.visited,

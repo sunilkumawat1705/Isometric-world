@@ -4,12 +4,13 @@ import { useFrame } from "@react-three/fiber";
 import { Html } from "@/components/village/SceneHtml";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
-import { Box, Cylinder, Rock } from "../Primitives";
+import { Rock } from "../Primitives";
 import { useGame } from "@/lib/village/store";
 import { activities, crystals } from "@/lib/village/minigames/config";
 import { useAdventure } from "@/lib/village/minigames/store";
 import { playCue } from "@/lib/village/minigames/audio";
 import JungleCourse from "./JungleCourse";
+import ParkourLodge from "./ParkourLodge";
 function Crystal({
   position,
   id,
@@ -65,6 +66,8 @@ function Crystal({
 }
 export default function AdventureWorld() {
   const started = useGame((s) => s.started);
+  const position = useGame((s) => s.position);
+  const panel = useGame((s) => s.panel);
   const collected = useAdventure((s) => s.collected),
     active = useAdventure((s) => s.activeGame);
   const burst = useRef<THREE.Group>(null),
@@ -88,6 +91,7 @@ export default function AdventureWorld() {
   });
   return (
     <>
+      <ParkourLodge />
       {crystals
         .filter((c) => !collected.includes(c.id))
         .map((c) => (
@@ -101,45 +105,23 @@ export default function AdventureWorld() {
       {active === "parkour" && <JungleCourse />}
       {activities.map((a) => (
         <group key={a.id} position={a.position}>
-          {a.id === "parkour" && (
-            <>
-              {[-1, 1].map((side) => (
-                <Cylinder
-                  key={side}
-                  color="#6e4a2e"
-                  position={[side * 1.1, 0.95, 0]}
-                  scale={[0.16, 1.9, 0.16]}
-                />
-              ))}
-              <Box
-                color="#8a5f3a"
-                position={[0, 1.95, 0]}
-                scale={[2.6, 0.22, 0.24]}
-              />
-              {[-0.8, -0.2, 0.5].map((x, i) => (
-                <Rock
-                  key={x}
-                  color={i % 2 ? "#4fae48" : "#3f9c43"}
-                  position={[x, 1.78, 0.04]}
-                  scale={[0.22, 0.34, 0.1]}
-                />
-              ))}
-              <Rock
-                color="#ec5f86"
-                position={[0.9, 0.2, 0.7]}
-                scale={[0.4, 0.16, 0.4]}
-              />
-            </>
-          )}
-          <Html center position={[0, 2.1, 0]} zIndexRange={[4, 0]}>
-            <button
-              className="activity-label"
-              disabled={!!active || !started}
-              onClick={() => useAdventure.getState().start(a.id)}
-            >
-              ⚑ {a.prompt}
-            </button>
-          </Html>
+          {started &&
+            !active &&
+            !panel &&
+            Math.hypot(
+              position[0] - a.position[0],
+              position[1] - a.position[2],
+            ) < 1.9 && (
+              <Html center position={[0, 2.1, 0]} zIndexRange={[4, 0]}>
+                <button
+                  className="activity-label"
+                  disabled={!!active || !started}
+                  onClick={() => useAdventure.getState().start(a.id)}
+                >
+                  ⚑ {a.prompt}
+                </button>
+              </Html>
+            )}
         </group>
       ))}
     </>

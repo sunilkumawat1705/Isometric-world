@@ -48,6 +48,7 @@ export function Html({
   const outer = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const world = useRef(new Vector3());
+  const offset = useRef(new Vector3());
   const cameraPosition = useRef(new Vector3());
   const direction = useRef(new Vector3());
   const target = events.connected || gl.domElement.parentElement;
@@ -130,8 +131,8 @@ export function Html({
     );
     const distance = position.distanceTo(cameraPos);
     const behind =
-      position
-        .clone()
+      offset.current
+        .copy(position)
         .sub(cameraPos)
         .dot(camera.getWorldDirection(direction.current)) < 0;
     el.style.display = behind ? "none" : "block";

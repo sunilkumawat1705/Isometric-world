@@ -1,6 +1,6 @@
-# Hidden Leaf Village
+# Forest Village
 
-Sunil Kumawat’s playable Hidden Leaf Village portfolio, filled from his supplied resume and built with Next.js 16, React 19, TypeScript, React Three Fiber, Drei, Rapier, Zustand, Radix Dialog, and Motion.
+Sunil Kumawat’s playable Forest Village portfolio, filled from his supplied resume and built with Next.js 16, React 19, TypeScript, React Three Fiber, Drei, Rapier, Zustand, Radix Dialog, and Motion.
 
 ## Run locally
 
@@ -26,17 +26,17 @@ Playwright uses software WebGL for reproducible browser checks. This is not a ha
 
 ## Explore
 
-Click **Explore the village**, then use WASD or arrow keys to walk, Shift to run, Space to jump, and E near an entrance to interact. M opens the village map. Escape closes a panel. Mobile visitors get a drag joystick and jump/interaction buttons. Direct navigation and building labels open every portfolio section without walking. `/portfolio` exposes the same content as server-rendered HTML without WebGL.
+Click **Explore the village**, then use WASD or arrow keys to walk, Shift to run, Space to jump, and E near an entrance to interact. M opens the village map. Escape closes a panel. Mobile visitors get a drag joystick and jump/interaction buttons. Direct navigation opens every portfolio section without walking; nearby popup labels provide local directions and landmark actions. `/portfolio` exposes the same content as server-rendered HTML without WebGL.
 
-Sound is muted until enabled. Panel focus returns to the control that opened it. Settings include graphics quality, volume, camera zoom, and reduced decorative motion. Graphics quality defaults to low on narrow screens and devices reporting four or fewer logical processors. This heuristic does not measure actual device performance.
+Sound is muted until enabled. Panel focus returns to the control that opened it. Settings include volume, camera view and zoom, and reduced decorative motion. High graphics are always enabled: physical water, detailed surfaces and 2048px shadows. Pixel density is capped at 1.5 to bound GPU cost across devices. Rendering switches to demand and physics pauses while dialogs are open.
 
 ## Content
 
 - `lib/portfolio.ts`: resume-sourced profile, contact details, two work contributions, two career entries, skills, education, and certifications.
-- `lib/village/data.ts`: Hidden Leaf landmarks and movement constants; re-exports shared portfolio data.
+- `lib/village/data.ts`: Village landmarks and movement constants; re-exports shared portfolio data.
 - `components/village/Panels.tsx`: interactive portfolio presentation.
 - `components/village/ResumeDetails.tsx`: shared education, certifications, and resume download.
-- `components/village/HiddenLeaf.tsx`: original procedural Hidden Leaf village gate.
+- `components/village/VillageGate.tsx`: low wooden entrance fence.
 - `components/village/VillageMap.tsx`: coordinate-based terrain map, numbered portfolio destinations, current position, visited landmarks, and optional crystal markers. The directory offers the same navigation as the pins; mobile layouts stack the map and directory.
 - `public/Sunil_Kumawat_Resume.docx`: the supplied original resume, available as a download.
 
@@ -80,15 +80,18 @@ The npm audit check on 9 October 2026 reported a `braces <=3.0.3` stack-exhausti
 
 ### Village adventures
 
-Explore the village, then use **Adventure journal** or walk to an activity sign
-and press **E** (the touch Explore button also works). Portfolio navigation stays
+Explore the village, then follow the stone trail to **Parkour Lodge** in the north
+clearing. Walk through its open doorway to see the jungle trial introduction,
+or press **E** at the nearby popup (the touch Explore button also works).
+The map marks the lodge with a gold flag. **Adventure journal** also opens the
+trial. Portfolio navigation stays
 available independently of game rewards.
 
 - **Forge:** five strikes; Space/click/tap when the moving marker crosses the centre.
 - **Crystal hunt:** eight sensor collectibles; dashed map regions hint at their locations.
 - **Jungle trial (parkour):** a separate river-lagoon arena far east of the island
   (`ARENA_MIN_X` in `lib/village/minigames/course.ts`); the player is teleported in on
-  **Begin** and back to the sign on **Exit**. Nine flag islands, five hearts, and
+  **Begin** and back outside the lodge on **Exit**. Nine flag islands, five hearts, and
   49 gems to collect:
   - Rolling logs and swinging spiked balls hurt (knock-back, 1.6s of invulnerability);
     falling into the water costs a heart and returns you to the last flag.
@@ -107,19 +110,58 @@ available independently of game rewards.
   shared with the physics step, so they behave identically at any refresh rate and
   freeze while paused. The arena mounts only while the trial is active, and the
   village's shadow-casting sun follows the player into it.
-- **Library:** select the four runes in the order described by the clue.
-- **Archery:** a thirty-second round; pointer/touch aim and shoot, or arrows + Space.
-- **Garden:** choose a seed, plant, and water; flowers bloom in four seconds.
 
 Achievements, crystals, garden plants, and personal bests save to this browser
 under `forest-village-adventure-v1`. The adventure store hydrates on client mount;
-live game state and Three.js/Rapier objects are never saved. Activity definitions
+live game state and Three.js/Rapier objects are never saved. Unchanged progress
+skips storage writes, and storage failures keep gameplay available in memory.
+Activity definitions
 and coordinates live in `lib/village/minigames/config.ts`.
 
-In **Settings → Graphics quality**, select **Ultra · realistic materials & water**
+High graphics are always enabled
 for procedural surface grain, physical reflective ripple water, generated environment
-lighting, and 4096px shadows. Balanced/low modes keep the original lighter rendering.
+lighting, and 2048px shadows. There is no graphics preset selector.
 The sound button enables an original local village chill loop: soft harmonic pads,
 breeze, stream-like noise, and distant birds. Settings include a mute toggle and
 volume slider; ambience pauses when the tab is hidden. Game sounds follow the same
 mute and volume controls. No remote audio or environment downloads are required.
+
+### Living village
+
+The island is now 64 world units across, with a south meadow, grain garden and
+turning windmill. Nearby waypoint popups, doorstep pots, barrels, firewood, river stones
+and reeds share the existing clay aesthetic. The minimap uses the expanded scale.
+
+Lighting follows the visitor's device-local time, with a stylized 06:00 sunrise
+and 18:00 sunset, smooth twilight, moonlight, stars, evening fireflies and warm
+lantern pools. The moon's illuminated shape and light
+strength follow an approximate date-based 29.5306-day lunar cycle. This is not a
+location-based astronomical simulation; no geolocation or external API is used.
+
+The river cuts through the walkable terrain. The wooden bridge is the only
+crossing: the no-swimming rule also blocks jumping and diagonal shortcuts across
+water. The player retains fixed-step gravity, buffered jumps, slope handling and
+collision sliding. Three lightweight crates respond to character impulses,
+friction, damping and gravity. Decorative motion respects reduced-motion mode.
+
+`tests/environment.test.ts` verifies civil-time lighting, lunar illumination and
+swept crossing rules. `tests/e2e/living-village.spec.ts` checks day/night rendering
+and actual controller movement from the entrance across the bridge into the village.
+The character starts outside the south gate. Only the nearest waypoint within six world units displays a screen-space popup
+while exploring. Wooden signboards and the lamp at the bridge entrance are removed.
+
+### Village records
+
+After a successful jungle trial, visitors can optionally enter a name (up to
+24 characters) and save their time, gems, stars and remaining hearts. Failed
+runs cannot be submitted. The nearby village-records popup and Adventure journal open
+the leaderboard, which ranks the fastest 50 runs by time, then gems. Records
+are stored in this browser’s localStorage, not shared between devices or users;
+a shared online leaderboard would require a backend and server-side score validation.
+Storage failures are shown in the form and leave the run available to retry.
+
+First-person mode uses immediate eye tracking, a bounded look pitch, a shorter
+far plane and projection updates only while zoom is changing. Distant building
+labels are hidden in that view. House details reuse cached primitive geometry
+and materials: shutters, a smith’s tools and quenching bucket, books, scrolls
+and a postbox.

@@ -5,15 +5,18 @@ import {
   Check,
   Compass,
   Gem,
+  Flag,
   LocateFixed,
   Trees,
 } from "lucide-react";
+import { WORLD_RADIUS, riverZ, BRIDGE_Z } from "@/lib/village/terrain";
 import { locations, type Section } from "@/lib/village/data";
 import { useGame } from "@/lib/village/store";
 import { useAdventure } from "@/lib/village/minigames/store";
 import { crystals } from "@/lib/village/minigames/config";
+import { PARKOUR_LODGE } from "@/lib/village/minigames/entrance";
 
-const point = (n: number) => Math.round((256 + n * 8) * 100) / 100;
+const point = (n: number) => Math.round((256 + n * 6.5) * 100) / 100;
 const percent = (n: number) => (point(n) / 512) * 100;
 const sectionNames: Record<Section, string> = {
   about: "About & education",
@@ -26,15 +29,20 @@ const island =
   "M115 99 Q164 63 242 69 Q320 60 394 115 Q446 163 445 245 Q463 322 398 397 Q338 453 249 447 Q166 458 110 395 Q62 338 68 257 Q55 172 115 99Z";
 const routes = [
   [0, 5, -9, -5],
+  [-1, 5, -1, -10],
+  [-1, -10, -3, -11.8],
   [0, 5, 6, -4],
   [0, 5, -11, 8],
   [0, 5, 7, 10],
   [7, 10, 16, 2],
-  [0, 5, 0, 21],
+  [0, 5, 1, 10],
+  [1, 10, 1, 21],
+  [1, 21, -13, 24],
+  [1, 21, 12, 24],
 ];
 const river = Array.from({ length: 37 }, (_, i) => {
-  const x = -26 + (i * 52) / 36;
-  return `${i ? "L" : "M"}${point(x)} ${point(14 + Math.sin(x * 0.18) * 1.8)}`;
+  const x = -WORLD_RADIUS + (i * WORLD_RADIUS * 2) / 36;
+  return `${i ? "L" : "M"}${point(x)} ${point(riverZ(x))}`;
 }).join(" ");
 const trees = Array.from({ length: 72 }, (_, i) => {
   const angle = i * 2.39996,
@@ -142,10 +150,10 @@ function MapTerrain() {
         />
       ))}
       <rect
-        x="251"
-        y="349"
-        width="27"
-        height="43"
+        x={point(1) - 10}
+        y={point(BRIDGE_Z - 4.5)}
+        width="20"
+        height={6.5 * 9}
         rx="2"
         fill="#79593c"
         stroke="#d8bc88"
@@ -153,7 +161,7 @@ function MapTerrain() {
       {Array.from({ length: 9 }, (_, i) => (
         <path
           key={i}
-          d={`M254 ${352 + i * 4}H275`}
+          d={`M${point(1) - 9} ${point(BRIDGE_Z - 4.2 + i)}H${point(1) + 9}`}
           stroke="#c6a777"
           strokeWidth="2"
         />
@@ -178,6 +186,17 @@ function MapTerrain() {
           />
         </g>
       ))}
+      <g
+        transform={`translate(${point(PARKOUR_LODGE[0])},${point(PARKOUR_LODGE[2])})`}
+      >
+        <rect x="-14" y="-12" width="28" height="24" fill="#dac79b" />
+        <path
+          d="M-17 -4L0 -17 17 -4 0 7Z"
+          fill="#557a58"
+          stroke="#324f3d"
+          strokeWidth="1.5"
+        />
+      </g>
       <g fill="#f0ddaa" fontFamily="inherit" fontSize="10" letterSpacing="1.4">
         <text x="256" y="48" textAnchor="middle">
           NORTH FOREST
@@ -220,10 +239,22 @@ export default function VillageMap({ compact = false }: { compact?: boolean }) {
   const collected = useAdventure((s) => s.collected);
   const [selected, setSelected] = useState<Section | null>(null);
   const [showCrystals, setShowCrystals] = useState(false);
-  const inVillage = Math.hypot(...position) <= 27;
+  const inVillage = Math.hypot(...position) <= WORLD_RADIUS;
   const map = (
     <div className={`village-map ${compact ? "compact" : ""}`}>
       <MemoizedMapTerrain />
+      <span
+        className="map-parkour"
+        role={compact ? undefined : "img"}
+        aria-label={compact ? undefined : "Parkour Lodge · north clearing"}
+        title="Parkour Lodge · walk inside to enter the jungle trial"
+        style={{
+          left: `${percent(PARKOUR_LODGE[0])}%`,
+          top: `${percent(PARKOUR_LODGE[2])}%`,
+        }}
+      >
+        <Flag size={compact ? 7 : 14} />
+      </span>
       {!compact &&
         showCrystals &&
         crystals
@@ -256,8 +287,12 @@ export default function VillageMap({ compact = false }: { compact?: boolean }) {
         ) : (
           <button
             key={location.id}
+            data-landmark={location.id}
             className={`map-landmark ${discovered ? "visited" : ""} ${selected === location.id ? "selected" : ""}`}
-            style={style}
+            style={{
+              left: `calc(50% + (${percent(location.position[0])}% - 50%) * var(--map-pin-spread, 1))`,
+              top: `calc(50% + (${percent(location.position[2])}% - 50%) * var(--map-pin-spread, 1))`,
+            }}
             aria-label={`Open ${location.name} from map`}
             title={`${location.name} · ${sectionNames[location.id]}`}
             onMouseEnter={() => setSelected(location.id)}
@@ -293,7 +328,7 @@ export default function VillageMap({ compact = false }: { compact?: boolean }) {
       <div className="map-canvas-area">
         <div className="map-toolbar">
           <span>
-            <Compass size={16} /> Konoha field guide
+            <Compass size={16} /> Village field guide
           </span>
           <button
             aria-pressed={showCrystals}
@@ -312,6 +347,9 @@ export default function VillageMap({ compact = false }: { compact?: boolean }) {
           </span>
           <span>
             <i className="legend-trail" /> Walking trails
+          </span>
+          <span>
+            <Flag size={12} /> Parkour Lodge
           </span>
         </div>
         {!inVillage && (
@@ -357,7 +395,7 @@ export default function VillageMap({ compact = false }: { compact?: boolean }) {
           <span>
             Follow the forest trails.
             <br />
-            Every landmark holds part of my story.
+            Parkour Lodge is in the north clearing.
           </span>
         </div>
         <div className="map-collection">

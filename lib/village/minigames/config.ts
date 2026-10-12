@@ -1,3 +1,4 @@
+import { PARKOUR_ENTRANCE } from "./entrance";
 export type GameId = "parkour";
 export const activities: {
   id: GameId;
@@ -9,8 +10,8 @@ export const activities: {
   {
     id: "parkour",
     name: "Jungle trial",
-    prompt: "Enter the jungle trial",
-    position: [-7, 0, 11.5],
+    prompt: "Parkour Lodge · Enter jungle trial",
+    position: PARKOUR_ENTRANCE,
     description:
       "Reach twelve flags: master precision jumps, faster logs, narrow bridges, and spiked ascents.",
   },
@@ -23,7 +24,7 @@ export const crystals: { id: string; position: [number, number, number] }[] = [
   { id: "forge-trail", position: [10, 0.8, -3] },
   { id: "lookout-trail", position: [19, 0.8, 3] },
   { id: "guild-trail", position: [11, 0.8, 5] },
-  { id: "library-trail", position: [-14, 0.8, 11] },
+  { id: "library-trail", position: [-14, 0.8, 8.5] },
   { id: "south-clearing", position: [0, 0.8, 20] },
 ];
 export { trail } from "./course";

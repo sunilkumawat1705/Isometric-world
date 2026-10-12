@@ -13,7 +13,7 @@ export interface VillageLocation {
 export const locations: VillageLocation[] = [
   {
     id: "about",
-    name: "Hokage Office",
+    name: "Village Hall",
     subtitle: "About Sunil · education & certifications",
     position: [-9, 0, -8],
     color: "#b9503e",
@@ -21,7 +21,7 @@ export const locations: VillageLocation[] = [
   },
   {
     id: "projects",
-    name: "Mission Hall",
+    name: "Workshop",
     subtitle: "Projects & professional work",
     position: [6, 0, -7],
     color: "#c77a3b",
@@ -29,7 +29,7 @@ export const locations: VillageLocation[] = [
   },
   {
     id: "skills",
-    name: "Ninja Academy",
+    name: "Village Library",
     subtitle: "Technical skills",
     position: [-11, 0, 5],
     color: "#477b70",
@@ -37,7 +37,7 @@ export const locations: VillageLocation[] = [
   },
   {
     id: "experience",
-    name: "Shinobi Archives",
+    name: "Guild Hall",
     subtitle: "Professional experience",
     position: [7, 0, 7],
     color: "#9d493a",

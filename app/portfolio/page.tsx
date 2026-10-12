@@ -13,7 +13,7 @@ export default function PortfolioPage() {
     <main className="standard-portfolio">
       <header>
         <Link href="/">← Return to the village</Link>
-        <span>Hidden Leaf Village</span>
+        <span>Forest Village</span>
       </header>
       <section className="standard-intro">
         <span className="panel-eyebrow">THE DEVELOPER BEHIND THE VILLAGE</span>

@@ -1,4 +1,5 @@
 "use client";
+import Leaderboard from "./minigames/Leaderboard";
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { AnimatePresence, motion } from "motion/react";
@@ -177,7 +178,7 @@ export function PortfolioContent({ section }: { section: Section }) {
           contributions.
         </p>
         <div className="panel-note">
-          Explore the Mission Hall to see my professional work.
+          Explore the Workshop to see my professional work.
         </div>
       </div>
     );
@@ -239,7 +240,6 @@ export function PortfolioContent({ section }: { section: Section }) {
 export default function Panels() {
   const panel = useGame((s) => s.panel),
     close = useGame((s) => s.close),
-    quality = useGame((s) => s.quality),
     reduced = useGame((s) => s.reduced),
     zoom = useGame((s) => s.zoom),
     view = useGame((s) => s.view),
@@ -247,11 +247,13 @@ export default function Panels() {
     sound = useGame((s) => s.sound);
   const location = locations.find((l) => l.id === panel);
   const titles =
-    panel === "map"
-      ? ["Village map", "Your guide to Hidden Leaf Village"]
-      : panel === "settings"
-        ? ["Make yourself at home", "Your adventure, your pace"]
-        : [location?.name, location?.subtitle];
+    panel === "leaderboard"
+      ? ["Village leaderboard", "Jungle trial · Hall of runners"]
+      : panel === "map"
+        ? ["Village map", "Your guide to Forest Village"]
+        : panel === "settings"
+          ? ["Make yourself at home", "Your adventure, your pace"]
+          : [location?.name, location?.subtitle];
   return (
     <Dialog.Root
       open={!!panel}
@@ -291,33 +293,21 @@ export default function Panels() {
                   >
                     <X size={20} />
                   </Dialog.Close>
-                  <span className="panel-eyebrow">HIDDEN LEAF VILLAGE</span>
+                  <span className="panel-eyebrow">FOREST VILLAGE</span>
                   <Dialog.Title>{titles[0]}</Dialog.Title>
                   <Dialog.Description>{titles[1]}</Dialog.Description>
                 </div>
                 <div className="panel-body">
-                  {panel === "map" ? (
+                  {panel === "leaderboard" ? (
+                    <Leaderboard />
+                  ) : panel === "map" ? (
                     <VillageMap />
                   ) : panel === "settings" ? (
                     <div className="settings-content">
-                      <label>
-                        Graphics quality
-                        <select
-                          value={quality}
-                          onChange={(e) =>
-                            useGame.setState({
-                              quality: e.target.value as typeof quality,
-                            })
-                          }
-                        >
-                          <option value="low">Low · lighter rendering</option>
-                          <option value="medium">Medium · balanced</option>
-                          <option value="high">High · sharper shadows</option>
-                          <option value="ultra">
-                            Ultra · highest shadow detail
-                          </option>
-                        </select>
-                      </label>
+                      <p className="graphics-note">
+                        High graphics · detailed materials, water and shadows
+                        always enabled.
+                      </p>
                       <label>
                         Camera view
                         <select

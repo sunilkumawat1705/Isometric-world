@@ -72,6 +72,22 @@ for (const viewport of [
       page.getByRole("button", { name: "Reset to checkpoint", exact: true }),
     ).toBeVisible();
     await page
+      .getByRole("button", { name: "Reset to checkpoint", exact: true })
+      .click();
+    await expect(page.getByLabel("Parkour challenge")).toBeVisible();
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Restart challenge", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Begin", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Begin", exact: true }).click();
+    await expect(page.getByLabel("Trial zoom", { exact: true })).toHaveText(
+      "100%",
+    );
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+    await page
       .getByRole("button", { name: "Return to village", exact: true })
       .click();
     await expect(page.locator(".exploration-note")).toBeVisible();

@@ -10,11 +10,11 @@ Recruiters, prospective collaborators, and visitors exploring Sunil Kumawat’s 
 
 ## Product Purpose
 
-Present Sunil’s resume accurately through an interactive Hidden Leaf Village portfolio, with accessible paths to professional history, skills, education, certifications, and contact details.
+Present Sunil’s resume accurately through an interactive Forest Village portfolio, with accessible paths to professional history, skills, education, certifications, and contact details.
 
 ## Brand Personality
 
-Playful, adventurous, thoughtful. The requested reference is Hidden Leaf Village: a forest settlement with shinobi training grounds, tiled rooftops and lanterns. The Hokage monument wall is intentionally removed.
+Playful, welcoming, thoughtful. A normal forest village with cottages, a workshop, a library, a guild hall, a post office, gardens and a river bridge. Use ordinary village names and details; no ninja branding, symbols or costumes. Wayfinding appears only in nearby popup labels, without physical signboards.
 
 ## Anti-references
 

@@ -15,8 +15,9 @@ for (const width of [1440, 390]) {
       await expect(
         page.getByRole("button", { name: "Explore the village", exact: true }),
       ).toBeEnabled({ timeout: 45000 });
-      await expect(page.locator(".building-seal").first()).toBeAttached();
-      await expect(page.locator(".world-label")).toHaveCount(5);
+      await expect(
+        page.locator(".building-seal, .world-label, .village-sign-caption"),
+      ).toHaveCount(0);
       await page.setViewportSize({ width: width - 30, height: 740 });
       await page.setViewportSize({ width, height: 844 });
       await page.locator(".standard-link").click();
@@ -28,14 +29,19 @@ for (const width of [1440, 390]) {
     await expect(
       page.getByRole("button", { name: "Explore the village", exact: true }),
     ).toBeEnabled({ timeout: 45000 });
-    // Exercise the actual projected DOM overlay, not the fixed navigation.
     await page
-      .locator(".world-label")
-      .filter({ hasText: "Hokage Office" })
+      .getByRole("button", { name: "Explore the village", exact: true })
       .click();
+    await expect(
+      page.getByRole("note", { name: "Nearby village sign" }),
+    ).toContainText("Forest Village");
+    if (width < 768)
+      await page.getByRole("button", { name: "Toggle portfolio menu" }).click();
+    await page.getByRole("button", { name: "About me", exact: true }).click();
     await expect(
       page.getByRole("dialog").getByRole("heading", { name: "Hi, I’m Sunil." }),
     ).toBeVisible();
+    await expect(page.locator(".village-sign-caption")).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 }

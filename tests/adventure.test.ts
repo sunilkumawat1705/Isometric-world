@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useAdventure, adventureRuntime } from "../lib/village/minigames/store";
 import { useGame } from "../lib/village/store";
+import { crystals, nearestActivity } from "../lib/village/minigames/config";
 import {
-  crystals,
-  nearestActivity,
-} from "../lib/village/minigames/config";
+  PARKOUR_ENTRANCE,
+  PARKOUR_LODGE,
+  PARKOUR_RETURN,
+} from "../lib/village/minigames/entrance";
+import { locations } from "../lib/village/data";
+import { villageStepAllowed } from "../lib/village/terrain";
 
 beforeEach(() => {
   useAdventure.setState({
@@ -41,8 +45,28 @@ describe("adventure lifecycle and rewards", () => {
   });
 });
 describe("activity input and scoring", () => {
+  it("puts the lodge in its own clearing with a safe return approach", () => {
+    for (const location of locations) {
+      expect(
+        Math.hypot(
+          PARKOUR_LODGE[0] - location.position[0],
+          PARKOUR_LODGE[2] - location.position[2],
+        ),
+      ).toBeGreaterThan(6);
+    }
+    expect(
+      villageStepAllowed(
+        PARKOUR_RETURN[0],
+        PARKOUR_RETURN[2],
+        PARKOUR_ENTRANCE[0],
+        PARKOUR_ENTRANCE[2],
+      ),
+    ).toBe(true);
+    expect(PARKOUR_RETURN[2]).toBeGreaterThan(PARKOUR_ENTRANCE[2] + 1);
+  });
   it("selects an activity only within its interaction radius", () => {
-    expect(nearestActivity(-7, 11.5)?.id).toBe("parkour");
+    expect(nearestActivity(-3, -11.8)?.id).toBe("parkour");
+    expect(nearestActivity(-7, 8.8)).toBeNull();
     expect(nearestActivity(0, 5)).toBeNull();
   });
 });

@@ -1532,9 +1532,8 @@ function Simulation() {
 }
 
 export default function JungleCourse() {
-  const quality = useGame((s) => s.quality),
-    textures = useTextures(),
-    scenery = useMemo(() => buildScenery(quality === "low"), [quality]);
+  const textures = useTextures(),
+    scenery = useMemo(() => buildScenery(false), []);
   useEffect(
     () => () => {
       adventureRuntime.live = false;

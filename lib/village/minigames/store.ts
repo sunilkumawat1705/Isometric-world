@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { createProgressStorage } from "./progressStorage";
 import { achievementNames, crystals, trail, type GameId } from "./config";
 import {
   MAX_HEARTS,
@@ -8,10 +9,12 @@ import {
   parkourStars,
 } from "./course";
 import { MAX_ZOOM, releaseInput, useGame } from "../store";
+import type { CompletedRun } from "./leaderboard";
 export type Phase = "idle" | "playing" | "paused" | "success" | "result";
 export type Plant = { seed: string; stage: number; growth: number } | null;
 interface AdventureState {
   activeGame: GameId | null;
+  completedRun: CompletedRun | null;
   phase: Phase;
   score: number;
   elapsed: number;
@@ -51,6 +54,7 @@ export const useAdventure = create<AdventureState>()(
   persist(
     (set, get) => ({
       activeGame: null,
+      completedRun: null,
       phase: "idle",
       score: 0,
       elapsed: 0,
@@ -76,6 +80,7 @@ export const useAdventure = create<AdventureState>()(
         set({
           activeGame: id,
           phase: "idle",
+          completedRun: null,
           score: 0,
           elapsed: 0,
           startedAt: null,
@@ -95,6 +100,7 @@ export const useAdventure = create<AdventureState>()(
         // The jungle run starts on its first flag; the timer begins immediately.
         set({
           phase: "playing",
+          completedRun: null,
           trialZoom: 1,
           elapsed: 0,
           score: 0,
@@ -155,14 +161,24 @@ export const useAdventure = create<AdventureState>()(
         const s = get(),
           id = s.activeGame;
         if (!id || s.phase !== "playing") return;
-        const score = value ?? s.score,
-          previous = s.personalBests[id];
+        const score = value ?? s.score;
+        if (!Number.isFinite(score) || score <= 0) return;
+        const previous = s.personalBests[id];
         const better =
           previous === undefined ||
           (id === "parkour" ? score < previous : score > previous);
         const stars = id === "parkour" ? parkourStars(s.gems, s.hearts) : 0;
         set({
           phase: "success",
+          completedRun: {
+            id: crypto.randomUUID(),
+            game: id,
+            seconds: score,
+            gems: s.gems,
+            stars,
+            hearts: s.hearts,
+            completedAt: new Date().toISOString(),
+          },
           score,
           stars,
           completedGames: [...new Set([...s.completedGames, id])],
@@ -208,6 +224,7 @@ export const useAdventure = create<AdventureState>()(
     {
       name: "forest-village-adventure-v1",
       skipHydration: true,
+      storage: createJSONStorage(() => createProgressStorage()),
       partialize: (s) => ({
         completedGames: s.completedGames,
         achievements: s.achievements,

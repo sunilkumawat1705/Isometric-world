@@ -5,11 +5,9 @@ import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { useGame } from "@/lib/village/store";
 import { setRealisticMaterials } from "./Primitives";
 export default function RealisticLighting() {
-  const { gl, scene } = useThree(),
-    quality = useGame((s) => s.quality);
+  const { gl, scene } = useThree();
   useEffect(() => {
     setRealisticMaterials(true);
     gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -18,7 +16,7 @@ export default function RealisticLighting() {
       room = new RoomEnvironment();
     const environment = generator.fromScene(room, 0.04);
     scene.environment = environment.texture;
-    scene.environmentIntensity = quality === "ultra" ? 0.55 : 0.4;
+    scene.environmentIntensity = 0.4;
     // Analytic environment avoids large texture downloads.
     generator.dispose();
     room.dispose();
@@ -27,6 +25,6 @@ export default function RealisticLighting() {
       environment.dispose();
       setRealisticMaterials(false);
     };
-  }, [gl, scene, quality]);
+  }, [gl, scene]);
   return null;
 }

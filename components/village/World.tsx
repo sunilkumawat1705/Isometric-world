@@ -1,4 +1,14 @@
 "use client";
+import LivingSky from "./LivingSky";
+import VillageDetails, { NightLamp } from "./VillageDetails";
+import {
+  bankStrips,
+  BRIDGE_Z,
+  RIVER_HALF_WIDTH,
+  riverZ,
+  WORLD_RADIUS,
+} from "@/lib/village/terrain";
+import { environmentRuntime } from "@/lib/village/environment";
 import { waterShader } from "./waterShader";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -10,12 +20,11 @@ import {
 import * as THREE from "three";
 import { Box, Cylinder, Rock, geometries, material } from "./Primitives";
 import Buildings from "./Buildings";
-import HiddenLeaf from "./HiddenLeaf";
+import { PARKOUR_LODGE } from "@/lib/village/minigames/entrance";
+import VillageGate from "./VillageGate";
 import { locations } from "@/lib/village/data";
 import { seeded } from "@/lib/village/logic";
 import { useGame } from "@/lib/village/store";
-import { adventureRuntime } from "@/lib/village/minigames/store";
-import { ARENA_MIN_X } from "@/lib/village/minigames/course";
 type Item = {
   position: [number, number, number];
   scale: [number, number, number];
@@ -65,13 +74,14 @@ function makeDecor() {
     grass: Item[] = [],
     paths: Item[] = [];
   const trees: { x: number; z: number; r: number }[] = [];
-  for (let i = 0; i < 160; i++) {
+  for (let i = 0; i < 190; i++) {
     const angle = random() * Math.PI * 2,
-      radius = 18 + random() * 9;
+      radius = 21 + random() * 10;
     const x = Math.cos(angle) * radius,
       z = Math.sin(angle) * radius;
     if (
-      (z > 12 && Math.abs(x) < 9) ||
+      (z > 10 && Math.abs(x) < 20) ||
+      Math.abs(z - riverZ(x)) < 3.4 ||
       locations.some(
         (l) => Math.hypot(x - l.position[0], z - l.position[2]) < 6,
       )
@@ -94,7 +104,7 @@ function makeDecor() {
   }
   for (let i = 0; i < 110; i++) {
     const angle = random() * Math.PI * 2,
-      radius = 24 + random() * 3;
+      radius = 30 + random() * 1.5;
     const size = 0.4 + random() * 1.1;
     rocks.push({
       position: [Math.cos(angle) * radius, -0.15, Math.sin(angle) * radius],
@@ -103,15 +113,18 @@ function makeDecor() {
       color: ["#8c9186", "#6a766b", "#a2aa8d"][i % 3],
     });
   }
-  for (let i = 0; i < 850; i++) {
-    const x = (random() - 0.5) * 49,
-      z = (random() - 0.5) * 47;
+  for (let i = 0; i < 1100; i++) {
+    const x = (random() - 0.5) * 61,
+      z = (random() - 0.5) * 60;
     if (
-      Math.hypot(x, z) > 24 ||
+      Math.hypot(x, z) > 30 ||
+      (Math.abs(x - PARKOUR_LODGE[0]) < 3.5 &&
+        Math.abs(z - PARKOUR_LODGE[2]) < 3.2) ||
       locations.some(
         (l) => Math.hypot(x - l.position[0], z - l.position[2]) < 4,
       ) ||
-      (z > 12 && z < 17)
+      Math.abs(z - riverZ(x)) < 3.2 ||
+      (z > 20 && x > 7 && x < 17)
     )
       continue;
     grass.push({
@@ -129,18 +142,24 @@ function makeDecor() {
   // Seeded irregular stepping stones laid along curved, authored routes.
   const routes = [
     [0, 5, -9, -5],
+    [-1, 5, -1, -10],
+    [-1, -10, -3, -11.8],
     [0, 5, 6, -4],
     [0, 5, -11, 8],
     [0, 5, 7, 10],
     [7, 10, 16, 2],
-    [0, 5, 0, 19],
+    [0, 5, 1, 10],
+    [1, 10, 1, 21],
+    [1, 21, -13, 24],
+    [1, 21, 9, 24],
   ];
   for (const [sx, sz, ex, ez] of routes)
     for (let i = 0; i < 32; i++) {
       const t = i / 31,
         bend = Math.sin(t * Math.PI) * 1.1;
-      const x = sx + (ex - sx) * t + bend,
+      const x = sx + (ex - sx) * t + (sx === 1 && ex === 1 ? 0 : bend),
         z = sz + (ez - sz) * t;
+      if (Math.abs(z - riverZ(x)) < RIVER_HALF_WIDTH + 0.4) continue;
       for (let j = 0; j < 3; j++)
         paths.push({
           position: [
@@ -157,20 +176,25 @@ function makeDecor() {
 }
 function Water() {
   const ref = useRef<THREE.Mesh>(null),
-    quality = useGame((s) => s.quality),
     shaderTime = useRef({ value: 0 }),
     reduced = useGame((s) => s.reduced);
   const geometry = useMemo(() => {
     const vertices: number[] = [],
       indices: number[] = [];
-    for (let i = 0; i <= 70; i++) {
-      const x = -26 + (i * 52) / 70,
-        z = 14 + Math.sin(x * 0.18) * 1.8;
-      vertices.push(x, 0.065, z - 1.35, x, 0.065, z + 1.35);
-      if (i < 70) {
-        const a = i * 2;
-        indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    let previous = false;
+    for (let i = 0; i <= 128; i++) {
+      const x = -WORLD_RADIUS + (i * WORLD_RADIUS * 2) / 128;
+      const edge = Math.sqrt(Math.max(0, WORLD_RADIUS ** 2 - x ** 2));
+      const from = Math.max(-edge, riverZ(x) - RIVER_HALF_WIDTH);
+      const to = Math.min(edge, riverZ(x) + RIVER_HALF_WIDTH);
+      if (to <= from) {
+        previous = false;
+        continue;
       }
+      const a = vertices.length / 3;
+      vertices.push(x, -0.25, from, x, -0.25, to);
+      if (previous) indices.push(a - 2, a - 1, a, a - 1, a + 1, a);
+      previous = true;
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
@@ -187,31 +211,17 @@ function Water() {
   return (
     <>
       <mesh ref={ref} geometry={geometry} receiveShadow>
-        {quality !== "low" ? (
-          <meshPhysicalMaterial
-            color="#5c9ea8"
-            roughness={0.16}
-            metalness={0}
-            ior={1.333}
-            side={THREE.DoubleSide}
-            customProgramCacheKey={() => "water-pbr-v2"}
-            onBeforeCompile={(shader) =>
-              waterShader(shader, shaderTime.current)
-            }
-          />
-        ) : (
-          <meshStandardMaterial
-            color="#397f83"
-            customProgramCacheKey={() => "water-pbr-v2"}
-            onBeforeCompile={(shader) =>
-              waterShader(shader, shaderTime.current)
-            }
-            roughness={0.24}
-            side={THREE.DoubleSide}
-          />
-        )}
+        <meshPhysicalMaterial
+          color="#5c9ea8"
+          roughness={0.16}
+          metalness={0}
+          ior={1.333}
+          side={THREE.DoubleSide}
+          customProgramCacheKey={() => "water-pbr-v2"}
+          onBeforeCompile={(shader) => waterShader(shader, shaderTime.current)}
+        />
       </mesh>
-      {[-25, 25].map((x) => (
+      {[-28, 29.5].map((x) => (
         <group key={x} position={[x, -1.3, 14 + Math.sin(x * 0.18) * 1.8]}>
           <Box color="#8ccfda" scale={[1.4, 2.8, 2.1]} />
           <Box
@@ -232,7 +242,7 @@ function Water() {
           color="#c3e0d8"
           position={[
             -22 + i * 6,
-            0.09,
+            -0.23,
             14 + Math.sin((-22 + i * 6) * 0.18) * 1.8,
           ]}
           rotation={[0, -0.25, 0]}
@@ -244,18 +254,18 @@ function Water() {
 }
 function Bridge() {
   return (
-    <group position={[1, 0, 14.3]}>
-      {Array.from({ length: 12 }, (_, i) => (
+    <group position={[1, 0, BRIDGE_Z]}>
+      {Array.from({ length: 19 }, (_, i) => (
         <Box
           key={i}
           color={i % 2 ? "#9e784a" : "#ac8656"}
-          position={[0, 0.2, -2.6 + i * 0.47]}
+          position={[0, 0.2, -4.23 + i * 0.47]}
           scale={[3.1, 0.25, 0.44]}
         />
       ))}
       {[-1, 1].map((side) => (
         <group key={side}>
-          {[-2.6, 0, 2.6].map((z) => (
+          {[-4.2, -2.1, 0, 2.1, 4.2].map((z) => (
             <Box
               key={z}
               color="#785139"
@@ -266,26 +276,27 @@ function Bridge() {
           <Box
             color="#ae8555"
             position={[side * 1.5, 1.55, 0]}
-            scale={[0.15, 0.17, 5.5]}
+            scale={[0.15, 0.17, 8.9]}
           />
           <Box
             color="#8a5a3b"
             position={[side * 1.5, 0.7, 0]}
-            scale={[0.12, 0.12, 5.5]}
+            scale={[0.12, 0.12, 8.9]}
           />
           <CuboidCollider
-            args={[0.1, 0.7, 2.75]}
+            args={[0.1, 0.7, 4.5]}
             position={[side * 1.5, 0.9, 0]}
           />
         </group>
       ))}
-      <CuboidCollider args={[1.5, 0.12, 2.85]} position={[0, 0.16, 0]} />
+      <CuboidCollider args={[1.5, 0.12, 4.5]} position={[0, 0.16, 0]} />
     </group>
   );
 }
 function Lantern({ x, z }: { x: number; z: number }) {
   return (
     <group position={[x, 0, z]}>
+      <NightLamp x={0} z={0} />
       <Cylinder
         color="#614a34"
         position={[0, 1.35, 0]}
@@ -304,10 +315,11 @@ function Lantern({ x, z }: { x: number; z: number }) {
 }
 function Effects() {
   const group = useRef<THREE.Group>(null),
-    reduced = useGame((s) => s.reduced),
-    quality = useGame((s) => s.quality);
+    reduced = useGame((s) => s.reduced);
   useFrame(({ clock }) => {
-    if (!group.current || reduced) return;
+    if (!group.current) return;
+    group.current.visible = environmentRuntime.daylight < 0.5;
+    if (reduced) return;
     group.current.children.forEach((particle, i) => {
       particle.position.y = 1.2 + Math.sin(clock.elapsedTime * 0.65 + i) * 0.6;
       particle.position.x =
@@ -316,7 +328,7 @@ function Effects() {
   });
   return (
     <group ref={group}>
-      {Array.from({ length: quality === "low" ? 10 : 35 }, (_, i) => (
+      {Array.from({ length: 35 }, (_, i) => (
         <mesh
           key={i}
           position={[Math.sin(i * 6.2) * 19, 1, Math.cos(i * 4.7) * 18]}
@@ -329,69 +341,44 @@ function Effects() {
   );
 }
 export default function World() {
-  const quality = useGame((s) => s.quality);
   const decor = useMemo(() => makeDecor(), []);
-  const sun = useRef<THREE.DirectionalLight>(null);
-  // The shadow frustum is fixed around the sun's target, so carry it with the
-  // player into the jungle arena (snapped to a grid to avoid shimmering).
-  useFrame(() => {
-    const light = sun.current;
-    if (!light) return;
-    const inArena = adventureRuntime.player.x > ARENA_MIN_X,
-      cx = inArena ? Math.round(adventureRuntime.player.x) : 0,
-      cz = inArena ? Math.round(adventureRuntime.player.z) : 0;
-    if (light.target.position.x === cx && light.target.position.z === cz)
-      return;
-    light.position.set(cx - 15, 30, cz + 10);
-    light.target.position.set(cx, 0, cz);
-    light.target.updateMatrixWorld();
-  });
   return (
     <>
-      <ambientLight intensity={0.3} color="#e0ebd5" />
-      <hemisphereLight args={["#d6e5e7", "#728555", 0.75]} />
-      <directionalLight
-        ref={sun}
-        position={[-15, 30, 10]}
-        intensity={2.4}
-        color="#ffe0ac"
-        castShadow
-        shadow-mapSize={
-          quality === "ultra"
-            ? [4096, 4096]
-            : quality === "low"
-              ? [512, 512]
-              : [2048, 2048]
-        }
-        shadow-camera-left={-32}
-        shadow-camera-right={32}
-        shadow-camera-top={32}
-        shadow-camera-bottom={-32}
-        shadow-normalBias={0.025}
-        shadow-bias={-0.0002}
-        shadow-radius={4}
-      />
+      <LivingSky />
       <mesh position={[0, -5, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[300, 300]} />
         <shadowMaterial transparent opacity={0.22} depthWrite={false} />
       </mesh>
-      <mesh position={[0, -1.85, 0]} receiveShadow castShadow>
-        <cylinderGeometry args={[26, 24, 3.6, 18]} />
+      <mesh position={[0, -2.2, 0]} receiveShadow castShadow>
+        <cylinderGeometry args={[32, 30, 3.2, 64]} />
         <meshStandardMaterial color="#6d7561" flatShading />
       </mesh>
-      <mesh position={[0, -0.18, 0]} receiveShadow>
-        <cylinderGeometry args={[26.1, 26, 0.36, 18]} />
-        <meshStandardMaterial color="#86a76a" flatShading />
-      </mesh>
       <RigidBody type="fixed" colliders={false}>
-        <CylinderCollider args={[0.2, 25.9]} position={[0, -0.2, 0]} />
-        {Array.from({ length: 32 }, (_, i) => {
-          const a = (i * Math.PI) / 16;
+        {bankStrips.map(({ x, edge, north, south }, i) => (
+          <group key={`bank-${i}`}>
+            {[
+              [-edge, Math.min(edge, north)],
+              [Math.max(-edge, south), edge],
+            ].map(([from, to], side) =>
+              to > from ? (
+                <group key={side} position={[x, -0.18, (from + to) / 2]}>
+                  <Box color="#86a76a" scale={[0.5, 0.36, to - from]} />
+                  <CuboidCollider
+                    args={[0.25, 0.18, (to - from) / 2]}
+                    friction={0.9}
+                  />
+                </group>
+              ) : null,
+            )}
+          </group>
+        ))}
+        {Array.from({ length: 48 }, (_, i) => {
+          const a = (i * Math.PI) / 24;
           return (
             <CuboidCollider
-              key={i}
-              args={[3, 2, 0.2]}
-              position={[Math.sin(a) * 25.5, 1, Math.cos(a) * 25.5]}
+              key={`edge-${i}`}
+              args={[2.2, 3, 0.2]}
+              position={[Math.sin(a) * 31.7, 1, Math.cos(a) * 31.7]}
               rotation={[0, a, 0]}
             />
           );
@@ -414,14 +401,14 @@ export default function World() {
       <Batch items={decor.flowers} kind="sphere" />
       <Water />
       <Buildings />
-      <HiddenLeaf />
+      <VillageGate />
+      <VillageDetails />
       <Effects />
       {[
         [-3, 3],
         [3, -2],
         [-6, 8],
         [10, 11],
-        [1, 19],
         [13, 1],
       ].map(([x, z]) => (
         <Lantern key={`${x}-${z}`} x={x} z={z} />
@@ -462,10 +449,6 @@ export default function World() {
           position={[0, 0.8, 0]}
           scale={[0.35, 0.65, 0.35]}
         />
-      </group>
-      <group position={[0, 0, 7]}>
-        <Box color="#775239" position={[0, 1, 0]} scale={[0.13, 2, 0.13]} />
-        <Box color="#ba9460" position={[0, 1.7, 0]} scale={[1.9, 0.48, 0.12]} />
       </group>
       {[
         [-16, 9],

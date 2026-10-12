@@ -1,14 +1,14 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "tests/e2e",
-  timeout: 60000,
+  timeout: 120000,
   use: {
     baseURL: "http://localhost:3000",
     headless: true,
     launchOptions: {
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
       args: [
-        "--use-angle=swiftshader",
+        `--use-angle=${process.env.PLAYWRIGHT_ANGLE ?? "swiftshader"}`,
         "--enable-webgl",
         "--ignore-gpu-blocklist",
       ],

@@ -1,12 +1,10 @@
 "use client";
-import { Html } from "@/components/village/SceneHtml";
+import HouseDetails from "./HouseDetails";
 import { useRef, useLayoutEffect } from "react";
 import { Object3D, Color, type InstancedMesh } from "three";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { Box, Cone, Cylinder, Rock, geometries, material } from "./Primitives";
 import { locations, type VillageLocation } from "@/lib/village/data";
-import LeafEmblem from "./LeafEmblem";
-import { useGame } from "@/lib/village/store";
 
 function Window({
   x,
@@ -193,38 +191,9 @@ function Cottage({ location }: { location: VillageLocation }) {
         width={width + 1.2}
         depth={depth + 1.1}
       />
-      <group position={[0, 3.3, depth / 2 + 0.24]}>
-        <Box color="#344e43" scale={[1.35, 0.7, 0.08]} />
-        <Html
-          center
-          position={[0, 0, 0.07]}
-          transform
-          distanceFactor={5}
-          zIndexRange={[2, 0]}
-          style={{ pointerEvents: "none" }}
-        >
-          <div className="building-seal">
-            <LeafEmblem size={30} />
-          </div>
-        </Html>
-      </group>
-      {library && (
-        <group position={[-3.7, 0, -1]}>
-          <Box color="#6a4a35" position={[0, 1, 0]} scale={[0.18, 2, 0.18]} />
-          {[1, 0.7, 0.35].map((radius, i) => (
-            <Cylinder
-              key={radius}
-              color={i % 2 ? "#ece0be" : "#aa4838"}
-              position={[0, 2.1, 0.08 + i * 0.035]}
-              rotation={[Math.PI / 2, 0, 0]}
-              scale={[radius, 0.06, radius]}
-            />
-          ))}
-        </group>
-      )}
       {guild &&
         [-1, 1].map((i) => (
-          <group key={i} position={[i * 2.1, 2.5, depth / 2 + 0.24]}>
+          <group key={i} position={[i * 2.65, 2.5, depth / 2 + 0.24]}>
             <Box color="#647f58" scale={[0.7, 1.6, 0.06]} />
             <Box color="#e9c979" scale={[0.12, 1.4, 0.07]} />
           </group>
@@ -361,64 +330,6 @@ function Cottage({ location }: { location: VillageLocation }) {
     </>
   );
 }
-function HokageOffice() {
-  return (
-    <>
-      <Cylinder
-        color="#9eaa90"
-        position={[0, 0.3, 0]}
-        scale={[2.55, 0.6, 2.55]}
-      />
-      <Cylinder
-        color="#dec49a"
-        position={[0, 2.1, 0]}
-        scale={[2.3, 3.3, 2.3]}
-      />
-      <Cylinder
-        color="#a94b38"
-        position={[0, 3.5, 0]}
-        scale={[2.4, 0.55, 2.4]}
-      />
-      <Cylinder
-        color="#b44f3d"
-        position={[0, 3.95, 0]}
-        scale={[2.85, 0.35, 2.85]}
-      />
-      <Cylinder
-        color="#e4d0a4"
-        position={[0, 4.6, 0]}
-        scale={[1.65, 1.1, 1.65]}
-      />
-      <Cone color="#a94b38" position={[0, 5.5, 0]} scale={[2.15, 1, 2.15]} />
-      <Cylinder
-        color="#435b46"
-        position={[0, 6.1, 0]}
-        scale={[0.14, 0.5, 0.14]}
-      />
-      {[-1, 1].map((side) => (
-        <Window key={side} x={side * 1.25} y={2.25} z={1.95} />
-      ))}
-      <Box
-        color="#604733"
-        position={[0, 1.45, 2.25]}
-        scale={[1.2, 2.3, 0.15]}
-      />
-      <Box color="#a84c39" position={[0, 1.45, 2.35]} scale={[1, 2.1, 0.08]} />
-      <Box color="#9eaa90" position={[0, 0.15, 2.8]} scale={[1.7, 0.3, 1.2]} />
-      <Html
-        transform
-        center
-        position={[0, 4.55, 1.7]}
-        distanceFactor={5}
-        zIndexRange={[2, 0]}
-        style={{ pointerEvents: "none" }}
-      >
-        <div className="hokage-seal">火</div>
-      </Html>
-      <CuboidCollider args={[2.3, 2.9, 2]} position={[0, 2.9, 0]} />
-    </>
-  );
-}
 function Tower() {
   return (
     <>
@@ -461,8 +372,6 @@ function Tower() {
   );
 }
 export default function Buildings() {
-  const near = useGame((s) => s.near),
-    open = useGame((s) => s.open);
   return (
     <>
       {locations.map((location) => (
@@ -470,30 +379,15 @@ export default function Buildings() {
           <RigidBody type="fixed" colliders={false}>
             {location.id === "contact" ? (
               <Tower />
-            ) : location.id === "about" ? (
-              <HokageOffice />
             ) : (
               <Cottage location={location} />
             )}
+            <HouseDetails
+              kind={location.id}
+              width={location.id === "experience" ? 6 : 4.6}
+              depth={location.id === "experience" ? 5 : 4}
+            />
           </RigidBody>
-          <Html
-            position={[0, location.id === "contact" ? 10.3 : 7.6, 0]}
-            center
-            zIndexRange={[5, 0]}
-          >
-            <button
-              className={`world-label ${near === location.id ? "near" : ""}`}
-              onClick={() => open(location.id)}
-              aria-label={`Open ${location.name}`}
-              title={location.name}
-            >
-              <span className="world-label-number">
-                {locations.indexOf(location) + 1}
-              </span>
-              <span className="world-label-name">{location.name}</span>
-              <small>{location.subtitle}</small>
-            </button>
-          </Html>
         </group>
       ))}
     </>

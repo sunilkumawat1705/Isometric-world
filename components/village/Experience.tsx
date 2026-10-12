@@ -1,5 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
+import WorldClock from "./WorldClock";
 import Link from "next/link";
 import { Component, useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -15,6 +16,7 @@ import {
   Menu,
   X,
   Eye,
+  TreePine,
   Minus,
   Plus,
 } from "lucide-react";
@@ -28,7 +30,6 @@ import {
 } from "@/lib/village/store";
 import { blocksMovement, useAdventure } from "@/lib/village/minigames/store";
 import { nearestActivity } from "@/lib/village/minigames/config";
-import LeafEmblem from "./LeafEmblem";
 import Panels, { VillageMap } from "./Panels";
 const AdventureUI = dynamic(() => import("./minigames/AdventureUI"), {
   ssr: false,
@@ -228,6 +229,7 @@ function useAudio() {
 export default function Experience() {
   const started = useGame((s) => s.started),
     ready = useGame((s) => s.ready),
+    view = useGame((s) => s.view),
     reduced = useGame((s) => s.reduced),
     near = useGame((s) => s.near),
     open = useGame((s) => s.open),
@@ -247,10 +249,6 @@ export default function Experience() {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     useGame.setState({
       reduced: mq.matches,
-      quality:
-        window.innerWidth < 768 || navigator.hardwareConcurrency <= 4
-          ? "low"
-          : "medium",
     });
     const onMotion = () => useGame.setState({ reduced: mq.matches });
     mq.addEventListener("change", onMotion);
@@ -333,11 +331,23 @@ export default function Experience() {
   useEffect(() => {
     if (panel) releaseInput();
   }, [panel]);
+  useEffect(() => {
+    if (!menu) return;
+    releaseInput();
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenu(false);
+        document.querySelector<HTMLButtonElement>(".mobile-menu")?.focus();
+      }
+    };
+    window.addEventListener("keydown", dismiss);
+    return () => window.removeEventListener("keydown", dismiss);
+  }, [menu]);
   const target = locations.find((l) => l.id === near);
   const activityTarget = nearestActivity(...position);
   return (
     <main
-      className={`village-experience ${started ? "is-exploring" : ""} ${activeGame ? "is-in-trial" : ""} ${reduced ? "reduced-motion" : ""}`}
+      className={`village-experience ${started ? "is-exploring" : ""} ${activeGame ? "is-in-trial" : ""} ${reduced ? "reduced-motion" : ""} ${menu ? "menu-open" : ""} ${view === "first-person" ? "is-first-person" : ""}`}
     >
       <a className="skip-link" href="/portfolio">
         Skip to standard portfolio
@@ -347,7 +357,7 @@ export default function Experience() {
         id="world-input"
         role="group"
         tabIndex={0}
-        aria-label="Interactive isometric Hidden Leaf Village"
+        aria-label="Interactive isometric Forest Village"
       >
         <SceneBoundary>
           <Scene />
@@ -357,10 +367,10 @@ export default function Experience() {
       <header className="village-header">
         <Link href="/" className="village-brand">
           <span className="brand-symbol">
-            <LeafEmblem size={26} />
+            <TreePine size={26} />
           </span>
           <span>
-            Hidden Leaf Village
+            Forest Village
             <small>
               {portfolio.name} · {portfolio.role}
             </small>
@@ -418,25 +428,26 @@ export default function Experience() {
         </div>
       </header>
       <div className="world-status">
-        <span className="status-dot" /> Full stack developer. Shinobi spirit.
+        <span className="status-dot" /> Full stack developer. A village to
+        explore.
         <span className="status-divider">/</span>
-        <span>Built to be explored</span>
+        <WorldClock />
       </div>
       {!started && (
         <section className="village-welcome">
           <span className="welcome-kicker">
-            <span /> WELCOME TO HIDDEN LEAF VILLAGE
+            <span /> WELCOME TO FOREST VILLAGE
           </span>
           <h1>
             My code.
             <br />
-            My ninja <em>way.</em>
+            My <em>village.</em>
           </h1>
           <p>
             I’m {portfolio.name}, a {portfolio.role.toLowerCase()}.
             <br />
             Explore my work, training, and journey
-            <br className="desktop-break" /> through Hidden Leaf Village.
+            <br className="desktop-break" /> through Forest Village.
           </p>
           <button
             id="explore-button"

@@ -4,20 +4,20 @@ test("portfolio sections, filtering, focus, map, and fallback", async ({
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "My code. My ninja way." }),
+    page.getByRole("heading", { name: "My code. My village." }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Explore the village", exact: true }),
   ).toBeEnabled({ timeout: 45000 });
-  await page.screenshot({ path: "output/playwright/hidden-leaf-welcome.png" });
+  await page.screenshot({
+    path: "output/playwright/forest-village-welcome.png",
+  });
   await page
     .getByRole("navigation", { name: "Portfolio navigation" })
     .getByRole("button", { name: "Projects", exact: true })
     .click();
   const dialog = page.getByRole("dialog");
-  await expect(
-    dialog.getByRole("heading", { name: "Mission Hall" }),
-  ).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Workshop" })).toBeVisible();
   await expect(
     dialog.getByRole("heading", {
       name: "E-commerce Theme Pilot",
@@ -50,7 +50,7 @@ test("portfolio sections, filtering, focus, map, and fallback", async ({
     page.getByRole("heading", { name: "Village map", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Open Hokage Office from map" })
+    .getByRole("button", { name: "Open Village Hall from map" })
     .click();
   await expect(
     page.getByRole("heading", { name: "Hi, I’m Sunil." }),
@@ -168,12 +168,18 @@ test("mobile controls and responsive panels", async ({ page }) => {
     page.getByRole("button", { name: "Jump", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Toggle portfolio menu" }).click();
+  await expect(page.locator(".view-controls")).toBeHidden();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: "Toggle portfolio menu" }),
+  ).toBeFocused();
+  await page.getByRole("button", { name: "Toggle portfolio menu" }).click();
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Skills", exact: true })
     .click();
   await expect(
-    page.getByRole("dialog").getByRole("heading", { name: "Ninja Academy" }),
+    page.getByRole("dialog").getByRole("heading", { name: "Village Library" }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -193,6 +199,44 @@ test("buildings block movement and proximity E opens the correct landmark", asyn
   await expect(start).toBeEnabled({ timeout: 45000 });
   await start.click();
   const status = page.getByLabel("Player status");
+  // Stop in the browser as soon as the published position reaches the
+  // library's lane; remote keyboard latency can overshoot on software WebGL.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const status = document.querySelector('[aria-label="Player status"]')!;
+        const keys = ["w", "d"];
+        const stop = () =>
+          keys.forEach((key) =>
+            window.dispatchEvent(new KeyboardEvent("keyup", { key })),
+          );
+        const timeout = setTimeout(() => {
+          stop();
+          observer.disconnect();
+          reject(new Error("Entrance bridge approach timed out"));
+        }, 30000);
+        const observer = new MutationObserver(() => {
+          if (Number(status.getAttribute("data-z")) <= 4.5) {
+            stop();
+            clearTimeout(timeout);
+            observer.disconnect();
+            resolve();
+          }
+        });
+        observer.observe(status, {
+          attributes: true,
+          attributeFilter: ["data-z"],
+        });
+        keys.forEach((key) =>
+          window.dispatchEvent(
+            new KeyboardEvent("keydown", { key, cancelable: true }),
+          ),
+        );
+      }),
+  );
+  await expect.poll(() => status.getAttribute("data-state")).toBe("idle");
+  expect(Number(await status.getAttribute("data-z"))).toBeGreaterThan(3.5);
+  expect(Number(await status.getAttribute("data-z"))).toBeLessThan(7);
   await page.keyboard.down("w");
   await page.keyboard.down("a");
   await expect
@@ -205,14 +249,42 @@ test("buildings block movement and proximity E opens the correct landmark", asyn
   await page.keyboard.up("a");
   const x = Number(await status.getAttribute("data-x"));
   expect(x).toBeGreaterThan(-8.7);
+  // Approach below the book table so this checks the cottage wall.
   expect(x).toBeLessThan(-7.5);
+  await page.keyboard.down("w");
+  await page.keyboard.down("a");
+  await page.waitForTimeout(500);
+  await page.keyboard.up("w");
+  await page.keyboard.up("a");
+  expect(Number(await status.getAttribute("data-x"))).toBeCloseTo(x, 1);
   expect(Number(await status.getAttribute("data-y"))).toBeGreaterThan(0.65);
+  await expect(
+    page.getByRole("button", {
+      name: "E Explore Village Library",
+      exact: true,
+    }),
+  ).toBeVisible();
   await page.keyboard.press("e");
   await expect(
-    page.getByRole("dialog").getByRole("heading", { name: "Ninja Academy" }),
+    page.getByRole("dialog").getByRole("heading", { name: "Village Library" }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  // Projected labels follow subpixel camera/physics motion. Activate the real
+  // accessible button with Enter rather than waiting for pixel stability.
+  const libraryLabel = page.getByRole("button", {
+    name: "Open Village Library",
+    exact: true,
+  });
+  await libraryLabel.focus();
+  await libraryLabel.press("Enter");
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { name: "Village Library" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page
+    .getByRole("group", { name: "Interactive isometric Forest Village" })
+    .focus();
   await page.keyboard.press("Space");
   await expect
     .poll(async () => Number(await status.getAttribute("data-y")), {

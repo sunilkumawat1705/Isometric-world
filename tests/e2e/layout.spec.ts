@@ -1,8 +1,14 @@
 import { test, expect } from "@playwright/test";
 
 for (const viewport of [
+  { width: 1920, height: 1080 },
   { width: 1440, height: 900 },
+  { width: 1366, height: 768 },
   { width: 1024, height: 768 },
+  { width: 820, height: 1180 },
+  { width: 768, height: 1024 },
+  { width: 844, height: 390 },
+  { width: 568, height: 320 },
   { width: 390, height: 844 },
   { width: 360, height: 640 },
   { width: 320, height: 568 },
