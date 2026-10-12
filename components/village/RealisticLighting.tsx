@@ -10,13 +10,15 @@ export default function RealisticLighting() {
   const { gl, scene } = useThree();
   useEffect(() => {
     setRealisticMaterials(true);
-    gl.toneMapping = THREE.ACESFilmicToneMapping;
+    // Neutral keeps the storybook greens and turquoise saturated where ACES
+    // would desaturate and hue-shift them.
+    gl.toneMapping = THREE.NeutralToneMapping;
     gl.toneMappingExposure = 1.0;
     const generator = new THREE.PMREMGenerator(gl),
       room = new RoomEnvironment();
     const environment = generator.fromScene(room, 0.04);
     scene.environment = environment.texture;
-    scene.environmentIntensity = 0.4;
+    scene.environmentIntensity = 0.2;
     // Analytic environment avoids large texture downloads.
     generator.dispose();
     room.dispose();

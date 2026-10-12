@@ -11,7 +11,11 @@ import {
 } from "@react-three/rapier";
 import * as THREE from "three";
 import { Box, Rock } from "./Primitives";
-import { VILLAGE_SPAWN, villageStepAllowed } from "@/lib/village/terrain";
+import {
+  VILLAGE_SPAWN,
+  WORLD_RADIUS,
+  villageStepAllowed,
+} from "@/lib/village/terrain";
 import { movement, type MovementState } from "@/lib/village/data";
 import { canJump, cameraMovement, nearestLocation } from "@/lib/village/logic";
 import {
@@ -146,6 +150,31 @@ function CharacterModel({
       ))}
     </group>
   );
+}
+// The overview frames the whole island; exploring starts on the village and
+// zooms between the island edge and close-ups.
+function villageZoom(
+  size: { width: number; height: number },
+  started: boolean,
+  zoom: number,
+) {
+  const fit = Math.min(size.width / 58, size.height / 43);
+  return started ? fit * 1.32 * zoom : fit * 0.8;
+}
+// Wide views stay centred on the island instead of showing empty sky past
+// the rim; as the view tightens the camera follows the player freely.
+function villageFocus(
+  p: { x: number; z: number },
+  size: { width: number; height: number },
+  zoom: number,
+) {
+  const scale = villageZoom(size, true, zoom),
+    reach = Math.min(size.width / scale / 2, size.height / scale / 1.23),
+    limit = Math.max(2, WORLD_RADIUS + 2 - reach),
+    distance = Math.hypot(p.x, p.z);
+  return distance <= limit
+    ? p
+    : { x: (p.x / distance) * limit, z: (p.z / distance) * limit };
 }
 export default function Player() {
   const body = useRef<RapierRigidBody>(null),
@@ -383,13 +412,24 @@ export default function Player() {
             : "idle";
     if (now - lastPublish.current > 0.1) {
       lastPublish.current = now;
-      const near = nearestLocation(p.x, p.z)?.id || null;
-      useGame.setState({
-        position: [Math.round(p.x * 100) / 100, Math.round(p.z * 100) / 100],
-        elevation: Math.round(p.y * 100) / 100,
-        motion: state.current,
-        ...(game.near !== near ? { near } : {}),
-      });
+      const near = nearestLocation(p.x, p.z)?.id || null,
+        x = Math.round(p.x * 100) / 100,
+        z = Math.round(p.z * 100) / 100,
+        elevation = Math.round(p.y * 100) / 100;
+      // Unchanged values would still re-render every subscriber (and the canvas).
+      if (
+        x !== game.position[0] ||
+        z !== game.position[1] ||
+        elevation !== game.elevation ||
+        state.current !== game.motion ||
+        near !== game.near
+      )
+        useGame.setState({
+          position: [x, z],
+          elevation,
+          motion: state.current,
+          near,
+        });
     }
   });
   useFrame(({ clock, camera, size }, delta) => {
@@ -436,7 +476,7 @@ export default function Player() {
       // Match the eye to physics immediately; smoothing here adds input latency.
       camera.position.set(p.x, p.y + 0.78, p.z);
       camera.rotation.set(cameraLook.pitch, cameraLook.yaw, 0, "YXZ");
-      const fov = 85 - ((game.zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 30;
+      const fov = 70 - ((game.zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 22;
       if (Math.abs(fov - camera.fov) > 0.01) {
         camera.fov +=
           (fov - camera.fov) * (1 - Math.exp(-8 * Math.min(delta, 0.1)));
@@ -451,10 +491,11 @@ export default function Player() {
       size.height,
       useAdventure.getState().trialZoom,
     );
+    const focus = villageFocus(p, size, game.zoom);
     cameraDesired.current.set(
-      game.started ? (inArena ? framing.x : p.x) : 0,
-      game.started ? p.y : 2,
-      game.started ? (inArena ? framing.z : p.z) : 0,
+      game.started ? (inArena ? framing.x : focus.x) : -1.4,
+      game.started ? p.y : -0.4,
+      game.started ? (inArena ? framing.z : focus.z) : 1.4,
     );
     const trialZoom = framing.zoom;
     if (adventureRuntime.cameraSnap || previousCamera.current !== camera) {
@@ -464,10 +505,7 @@ export default function Player() {
       if (camera instanceof THREE.OrthographicCamera)
         camera.zoom = inArena
           ? trialZoom
-          : Math.min(size.width / 58, size.height / 43) *
-            (game.started ? 1.32 : 0.3) *
-            (inArena ? 1.12 : 1) *
-            game.zoom;
+          : villageZoom(size, game.started, game.zoom);
     }
     cameraTarget.current.lerp(
       cameraDesired.current,
@@ -482,10 +520,7 @@ export default function Player() {
     const ortho = camera as THREE.OrthographicCamera;
     const targetZoom = inArena
       ? trialZoom
-      : Math.min(size.width / 58, size.height / 43) *
-        (game.started ? 1.32 : 0.3) *
-        (inArena ? 1.12 : 1) *
-        game.zoom;
+      : villageZoom(size, game.started, game.zoom);
     if (Math.abs(targetZoom - ortho.zoom) > 0.01) {
       ortho.zoom +=
         (targetZoom - ortho.zoom) * (1 - Math.exp(-3 * Math.min(delta, 0.1)));

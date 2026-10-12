@@ -1,6 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import WorldClock from "./WorldClock";
+import { ForestBackdrop, ForestForeground, TiltShift } from "./Atmosphere";
 import Link from "next/link";
 import { Component, useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -352,6 +353,7 @@ export default function Experience() {
       <a className="skip-link" href="/portfolio">
         Skip to standard portfolio
       </a>
+      <ForestBackdrop />
       <div
         className="scene-host"
         id="world-input"
@@ -363,7 +365,9 @@ export default function Experience() {
           <Scene />
         </SceneBoundary>
       </div>
+      <TiltShift />
       <div className="village-vignette" />
+      <ForestForeground />
       <header className="village-header">
         <Link href="/" className="village-brand">
           <span className="brand-symbol">

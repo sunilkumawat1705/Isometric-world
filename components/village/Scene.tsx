@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect } from "react";
+import { memo, Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
@@ -24,7 +24,7 @@ function ContextRecovery() {
   }, [gl, router]);
   return null;
 }
-export default function Scene() {
+function Scene() {
   const panel = useGame((s) => s.panel);
   const activityModal = useAdventure(
     (s) => !!s.activeGame && s.phase !== "playing",
@@ -56,3 +56,5 @@ export default function Scene() {
     </Canvas>
   );
 }
+// Experience re-renders with HUD state; the canvas subtree should not.
+export default memo(Scene);

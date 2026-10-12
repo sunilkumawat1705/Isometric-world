@@ -1,10 +1,84 @@
 "use client";
 import HouseDetails from "./HouseDetails";
-import { useRef, useLayoutEffect } from "react";
-import { Object3D, Color, type InstancedMesh } from "three";
+import { memo, useRef, useLayoutEffect } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Object3D, Color, type Group, type InstancedMesh } from "three";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
-import { Box, Cone, Cylinder, Rock, geometries, material } from "./Primitives";
+import {
+  Baked,
+  Box,
+  Cylinder,
+  Glow,
+  Rock,
+  geometries,
+  material,
+} from "./Primitives";
 import { locations, type VillageLocation } from "@/lib/village/data";
+import { useGame } from "@/lib/village/store";
+
+// Storybook roof colours; the map keeps the quieter section colours.
+const ROOF: Record<VillageLocation["id"], string> = {
+  about: "#d4533e",
+  projects: "#eb8a34",
+  skills: "#4f8dc0",
+  experience: "#d05a43",
+  contact: "#4f8dc0",
+};
+const WALL = "#f2e1ba",
+  TIMBER = "#5d3c26";
+const BLOOMS = ["#ff8fb3", "#ffd84d", "#fffaf0", "#ff6f61"];
+function FlowerBox({ x, y, z }: { x: number; y: number; z: number }) {
+  return (
+    <group position={[x, y, z]}>
+      <Box color="#7a4f2e" scale={[0.95, 0.2, 0.28]} />
+      <Rock
+        color="#5e9e3b"
+        position={[0, 0.14, 0]}
+        scale={[0.42, 0.12, 0.13]}
+      />
+      {[-0.32, -0.12, 0.1, 0.3].map((fx, i) => (
+        <Rock
+          key={fx}
+          color={BLOOMS[i]}
+          position={[fx, 0.22, 0.04]}
+          scale={[0.08, 0.07, 0.08]}
+        />
+      ))}
+    </group>
+  );
+}
+function Smoke({ position }: { position: [number, number, number] }) {
+  const ref = useRef<Group>(null),
+    reduced = useGame((s) => s.reduced);
+  useFrame(({ clock }) => {
+    if (!ref.current || reduced) return;
+    ref.current.children.forEach((puff, i) => {
+      const t = (clock.elapsedTime * 0.22 + i / 5) % 1;
+      puff.position.set(
+        Math.sin(t * 4 + i) * 0.3,
+        t * 2.6,
+        Math.cos(t * 3) * 0.2,
+      );
+      puff.scale.setScalar(0.16 + t * 0.38);
+    });
+  });
+  return (
+    <group ref={ref} position={position}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <mesh key={i} position={[0, i * 0.5, 0]} scale={0.2 + i * 0.07}>
+          <icosahedronGeometry args={[1, 0]} />
+          <meshStandardMaterial
+            color="#ecebe2"
+            transparent
+            opacity={0.32}
+            depthWrite={false}
+            flatShading
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
 
 function Window({
   x,
@@ -19,15 +93,15 @@ function Window({
 }) {
   return (
     <group position={[x, y, z]} rotation={[0, side ? Math.PI / 2 : 0, 0]}>
-      <Box color="#543d2d" scale={[0.95, 1.2, 0.13]} />
+      <Box color="#4f321f" scale={[0.95, 1.2, 0.13]} />
       <Box
-        color="#ffcf7e"
+        color="#ffc56a"
         glow
         position={[0, 0, 0.08]}
         scale={[0.72, 0.94, 0.05]}
       />
-      <Box color="#66452e" position={[0, 0, 0.13]} scale={[0.07, 1, 0.05]} />
-      <Box color="#66452e" position={[0, 0, 0.13]} scale={[0.8, 0.07, 0.05]} />
+      <Box color="#5d3c26" position={[0, 0, 0.13]} scale={[0.07, 1, 0.05]} />
+      <Box color="#5d3c26" position={[0, 0, 0.13]} scale={[0.8, 0.07, 0.05]} />
       <Box
         color="#a77d4c"
         position={[0, -0.64, 0.12]}
@@ -100,7 +174,7 @@ function Roof({
           position={[(side * width) / 4, 0.6, 0]}
           rotation={[0, 0, -side * slope]}
         >
-          <Box color="#4c392c" scale={[width * 0.64, 0.2, depth]} />
+          <Box color="#4a2f20" scale={[width * 0.64, 0.2, depth]} />
           <RoofTiles color={color} width={width} depth={depth} />
         </group>
       ))}
@@ -122,32 +196,27 @@ function Roof({
   );
 }
 function Cottage({ location }: { location: VillageLocation }) {
-  const library = location.id === "skills",
-    guild = location.id === "experience",
+  const guild = location.id === "experience",
     forge = location.id === "projects";
   const width = guild ? 6 : 4.6,
     depth = guild ? 5 : 4;
   return (
     <>
       <Box
-        color="#8c9186"
+        color="#9d9d92"
         position={[0, 0.4, 0]}
         scale={[width + 0.35, 0.8, depth + 0.35]}
       />
-      <Box
-        color={library ? "#c5c6a2" : "#e1ce9f"}
-        position={[0, 2.1, 0]}
-        scale={[width, 3.4, depth]}
-      />
+      <Box color={WALL} position={[0, 2.1, 0]} scale={[width, 3.4, depth]} />
       {[-1, 1].map((side) => (
         <group key={side}>
           <Box
-            color="#6a4a35"
+            color={TIMBER}
             position={[(side * width) / 2, 2.15, depth / 2 + 0.08]}
             scale={[0.24, 3.7, 0.22]}
           />
           <Box
-            color="#6a4a35"
+            color={TIMBER}
             position={[(side * width) / 2, 2.15, -depth / 2]}
             scale={[0.24, 3.7, 0.22]}
           />
@@ -158,7 +227,7 @@ function Cottage({ location }: { location: VillageLocation }) {
       {[0.8, 3.35].map((y) => (
         <Box
           key={y}
-          color="#6a4a35"
+          color={TIMBER}
           position={[0, y, depth / 2 + 0.1]}
           scale={[width, 0.2, 0.2]}
         />
@@ -186,11 +255,32 @@ function Cottage({ location }: { location: VillageLocation }) {
           scale={[1.65, 0.25, 1 - i * 0.18]}
         />
       ))}
-      <Roof
-        color={library ? "#578589" : location.color}
-        width={width + 1.2}
-        depth={depth + 1.1}
-      />
+      <Roof color={ROOF[location.id]} width={width + 1.2} depth={depth + 1.1} />
+      {[-1, 1].map((side) => (
+        <FlowerBox key={side} x={side * 1.48} y={1.42} z={depth / 2 + 0.3} />
+      ))}
+      <group position={[0.95, 2.75, depth / 2 + 0.3]}>
+        <Box color="#2f2b27" scale={[0.2, 0.08, 0.2]} position={[0, 0.2, 0]} />
+        <Box color="#ffd27a" glow scale={[0.16, 0.24, 0.16]} />
+      </group>
+      {location.id === "about" && (
+        <group position={[1.4, 0, -0.9]}>
+          <Box color="#8f8a80" position={[0, 5.1, 0]} scale={[0.8, 2.6, 0.8]} />
+          {[0, 1, 2].map((i) => (
+            <Box
+              key={i}
+              color="#a7a195"
+              position={[0, 4.2 + i * 0.62, 0]}
+              scale={[0.84, 0.1, 0.84]}
+            />
+          ))}
+          <Box
+            color="#6f6a62"
+            position={[0, 6.45, 0]}
+            scale={[0.98, 0.2, 0.98]}
+          />
+        </group>
+      )}
       {guild &&
         [-1, 1].map((i) => (
           <group key={i} position={[i * 2.65, 2.5, depth / 2 + 0.24]}>
@@ -249,15 +339,19 @@ function Cottage({ location }: { location: VillageLocation }) {
             position={[0, 1.05, 0]}
             scale={[2.3, 0.2, 2.3]}
           />
-          <Cone
-            color="#ff873d"
-            position={[0, 1.65, 0]}
-            scale={[0.6, 1.2, 0.6]}
+          <Box
+            color="#ff7a2a"
+            glow
+            position={[0, 1.4, 0]}
+            rotation={[0, 0.6, 0]}
+            scale={[0.75, 0.55, 0.75]}
           />
-          <Cone
-            color="#ffd28a"
-            position={[0, 1.45, 0.2]}
-            scale={[0.35, 0.85, 0.35]}
+          <Box
+            color="#ffd36b"
+            glow
+            position={[0.1, 1.55, 0.15]}
+            rotation={[0, 0.2, 0]}
+            scale={[0.38, 0.5, 0.38]}
           />
           <pointLight
             color="#ff873d"
@@ -344,9 +438,10 @@ function Tower() {
         )),
       )}
       <Box color="#9c754d" position={[0, 4, 0]} scale={[3.7, 0.25, 3.7]} />
-      <Box color="#d9c9a0" position={[0, 5.2, 0]} scale={[2.9, 2.25, 2.9]} />
+      <Box color={WALL} position={[0, 5.2, 0]} scale={[2.9, 2.25, 2.9]} />
       <Window x={0} y={5.3} z={1.5} />
-      <Roof color="#578589" width={4.2} depth={4.2} y={6.2} />
+      <Window x={1.5} y={5.3} z={0} side />
+      <Roof color={ROOF.contact} width={4.2} depth={4.2} y={6.2} />
       <Box
         color="#8b633e"
         position={[0, 1.9, 2.1]}
@@ -371,25 +466,47 @@ function Tower() {
     </>
   );
 }
-export default function Buildings() {
+function Buildings() {
   return (
     <>
-      {locations.map((location) => (
-        <group key={location.id} position={location.position}>
-          <RigidBody type="fixed" colliders={false}>
-            {location.id === "contact" ? (
-              <Tower />
-            ) : (
-              <Cottage location={location} />
+      {locations.map((location) => {
+        const depth = location.id === "experience" ? 5 : 4;
+        return (
+          <group key={location.id} position={location.position}>
+            <RigidBody type="fixed" colliders={false}>
+              <Baked>
+                {location.id === "contact" ? (
+                  <Tower />
+                ) : (
+                  <Cottage location={location} />
+                )}
+                <HouseDetails
+                  kind={location.id}
+                  width={location.id === "experience" ? 6 : 4.6}
+                  depth={depth}
+                />
+              </Baked>
+            </RigidBody>
+            {location.id === "about" && <Smoke position={[1.4, 6.6, -0.9]} />}
+            {location.id === "projects" && (
+              <Glow
+                position={[-4.1, 1.6, depth / 2 + 0.65]}
+                color="#ff8a3a"
+                size={3}
+                opacity={0.5}
+              />
             )}
-            <HouseDetails
-              kind={location.id}
-              width={location.id === "experience" ? 6 : 4.6}
-              depth={location.id === "experience" ? 5 : 4}
-            />
-          </RigidBody>
-        </group>
-      ))}
+            {location.id !== "contact" && (
+              <Glow
+                position={[0.95, 2.75, depth / 2 + 0.45]}
+                size={1}
+                opacity={0.35}
+              />
+            )}
+          </group>
+        );
+      })}
     </>
   );
 }
+export default memo(Buildings);

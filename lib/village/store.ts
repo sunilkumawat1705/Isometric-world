@@ -3,6 +3,8 @@ import { create } from "zustand";
 import type { MovementState, Section } from "./data";
 export const MIN_ZOOM = 0.75;
 export const MAX_ZOOM = 3;
+// Exploring opens on the whole village; zooming in follows the player.
+export const DEFAULT_ZOOM = 1;
 export type ViewMode = "birdseye" | "first-person";
 export const cameraLook = { yaw: Math.PI / 4, pitch: 0 };
 interface GameState {
@@ -34,7 +36,7 @@ export const useGame = create<GameState>((set) => ({
   elevation: VILLAGE_SPAWN[1],
   motion: "idle",
   reduced: false,
-  zoom: MAX_ZOOM,
+  zoom: DEFAULT_ZOOM,
   view: "birdseye",
   setZoom: (zoom) =>
     set({ zoom: Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom)) }),

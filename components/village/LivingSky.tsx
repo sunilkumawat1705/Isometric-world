@@ -17,9 +17,9 @@ export default function LivingSky() {
   const lastUpdate = useRef(-Infinity);
   const colors = useMemo(
     () => ({
-      night: new THREE.Color("#14273e"),
-      day: new THREE.Color("#8cb8ba"),
-      dusk: new THREE.Color("#987978"),
+      night: new THREE.Color("#122236"),
+      day: new THREE.Color("#2f5b3a"),
+      dusk: new THREE.Color("#5d4636"),
       sky: new THREE.Color(),
     }),
     [],
@@ -62,14 +62,16 @@ export default function LivingSky() {
       .getElementById("world-input")
       ?.closest<HTMLElement>(".village-experience");
     host?.style.setProperty("--village-sky", `#${colors.sky.getHexString()}`);
-    scene.environmentIntensity = 0.4 * (0.15 + d * 0.85);
-    if (ambient.current) ambient.current.intensity = 0.17 + d * 0.13;
-    if (hemi.current) hemi.current.intensity = 0.22 + d * 0.53;
+    host?.style.setProperty("--daylight", d.toFixed(2));
+    scene.environmentIntensity = 0.2 * (0.2 + d * 0.8);
+    if (ambient.current) ambient.current.intensity = 0.18 + d * 0.2;
+    if (hemi.current) hemi.current.intensity = 0.3 + d * 1.05;
     if (sun.current) {
-      sun.current.intensity = d * 2.4;
-      sun.current.color.set(d < 0.9 ? "#ffb77c" : "#ffe0ac");
+      sun.current.intensity = d * 2.7;
+      sun.current.color.set(d < 0.9 ? "#ffb36b" : "#ffd9a0");
+      // Afternoon light rakes in from the left of the isometric view.
       sun.current.position.set(
-        cx - Math.cos(sky.sunAngle) * 28,
+        cx + Math.cos(sky.sunAngle) * 28,
         Math.max(4, sky.altitude * 35),
         cz + 14,
       );
@@ -94,13 +96,13 @@ export default function LivingSky() {
   });
   return (
     <>
-      <ambientLight ref={ambient} intensity={0.3} color="#e0ebd5" />
-      <hemisphereLight ref={hemi} args={["#d6e5e7", "#728555", 0.75]} />
+      <ambientLight ref={ambient} intensity={0.38} color="#fff3df" />
+      <hemisphereLight ref={hemi} args={["#fff1d8", "#86913f", 1.35]} />
       <directionalLight
         ref={sun}
         position={[-15, 30, 10]}
-        intensity={2.4}
-        color="#ffe0ac"
+        intensity={2.7}
+        color="#ffe1b0"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-38}

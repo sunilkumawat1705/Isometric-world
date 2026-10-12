@@ -1,5 +1,5 @@
 "use client";
-import { waterShader } from "../waterShader";
+import { stylizedWater } from "../waterShader";
 /* Three.js scene objects are intentionally mutated from frame callbacks. */
 /* eslint-disable react-hooks/immutability */
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
@@ -120,9 +120,49 @@ const pick = <T,>(random: () => number, list: T[]) =>
   list[Math.floor(random() * list.length)];
 const PLANKS = ["#b98a56", "#a87c4a", "#c4955f", "#b08150"];
 const COURSE_GRASS = ["#86d04f", "#7cc94a", "#8ed652"];
-const WILD_GRASS = ["#4a9439", "#418c3a", "#4f9a3d"];
-const WILD_ROCKS = ["#5f6653", "#69705a", "#626a58"];
+const WILD_GRASS = ["#6cbf3f", "#5fb53a", "#79c845"];
+const WILD_ROCKS = ["#b9b3a0", "#aaa48f", "#c3bda8"];
 const LEAVES = ["#3fa84a", "#2f9a44", "#52b84e", "#278c3f"];
+const BLOSSOMS = ["#ff5d6c", "#ff8fb8", "#fff6e6", "#ffd84d", "#c9a0ff"];
+
+// Dressed-stone island flanks: staggered block courses on vertical faces,
+// darkening towards the waterline. Works for instanced and plain meshes.
+function stoneBlocks(shader: Parameters<THREE.Material["onBeforeCompile"]>[0]) {
+  shader.vertexShader = shader.vertexShader
+    .replace(
+      "#include <common>",
+      "#include <common>\nvarying vec3 vStoneWorld;",
+    )
+    .replace(
+      "#include <begin_vertex>",
+      `#include <begin_vertex>
+      vec4 stoneWorld = vec4(transformed, 1.0);
+      #ifdef USE_INSTANCING
+        stoneWorld = instanceMatrix * stoneWorld;
+      #endif
+      vStoneWorld = (modelMatrix * stoneWorld).xyz;`,
+    );
+  shader.fragmentShader = shader.fragmentShader
+    .replace(
+      "#include <common>",
+      "#include <common>\nvarying vec3 vStoneWorld;",
+    )
+    .replace(
+      "#include <color_fragment>",
+      `#include <color_fragment>
+      vec3 stoneNormal = normalize(cross(dFdx(vStoneWorld), dFdy(vStoneWorld)));
+      if (abs(stoneNormal.y) < 0.5) {
+        float course = floor(vStoneWorld.y / 0.5);
+        float along = (abs(stoneNormal.x) > abs(stoneNormal.z) ? vStoneWorld.z : vStoneWorld.x) + course * 0.45;
+        vec2 cell = vec2(floor(along / 0.9), course);
+        float fy = fract(vStoneWorld.y / 0.5), fu = fract(along / 0.9);
+        float joint = step(0.07, fy) * step(0.035, fu) * step(fu, 0.965);
+        float tone = 0.88 + 0.16 * fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+        diffuseColor.rgb *= mix(0.62, tone, joint);
+        diffuseColor.rgb *= mix(0.62, 1.0, smoothstep(${WATER_Y.toFixed(2)} - 0.8, ${WATER_Y.toFixed(2)} + 0.4, vStoneWorld.y));
+      }`,
+    );
+}
 
 // ------------------------------------------------------------ procedural art
 function canvasTexture(
@@ -172,9 +212,11 @@ function useTextures() {
       }
     });
     const foam = canvasTexture(128, 128, (g) => {
-      const gradient = g.createRadialGradient(64, 64, 22, 64, 64, 64);
-      gradient.addColorStop(0, "rgba(255,255,255,0)");
-      gradient.addColorStop(0.62, "rgba(255,255,255,0.9)");
+      const gradient = g.createRadialGradient(64, 64, 10, 64, 64, 64);
+      gradient.addColorStop(0, "rgba(190,255,245,0.55)");
+      gradient.addColorStop(0.55, "rgba(190,255,245,0.35)");
+      gradient.addColorStop(0.66, "rgba(255,255,255,0.95)");
+      gradient.addColorStop(0.74, "rgba(255,255,255,0.15)");
       gradient.addColorStop(1, "rgba(255,255,255,0)");
       g.fillStyle = gradient;
       g.fillRect(0, 0, 128, 128);
@@ -240,6 +282,10 @@ interface Scenery {
   trunks: Inst[];
   leaves: Inst[];
   lilies: Inst[];
+  blossoms: Inst[];
+  bushes: Inst[];
+  coconuts: Inst[];
+  bands: Inst[];
   foam: Inst[];
   planks: Inst[];
   piles: Inst[];
@@ -283,6 +329,10 @@ function buildScenery(low: boolean): Scenery {
       trunks: [],
       leaves: [],
       lilies: [],
+      blossoms: [],
+      bushes: [],
+      coconuts: [],
+      bands: [],
       foam: [],
       planks: [],
       piles: [],
@@ -311,6 +361,27 @@ function buildScenery(low: boolean): Scenery {
         s: [0.16 + random() * 0.1, h, 0.16 + random() * 0.1],
         c: pick(random, LEAVES),
       });
+      if (random() < 0.4) {
+        const bloom = pick(random, BLOSSOMS);
+        for (let k = 0; k < 3; k++)
+          s.blossoms.push({
+            p: [
+              tx + (random() - 0.5) * 0.45,
+              top + 0.12 + random() * 0.12,
+              tz + (random() - 0.5) * 0.45,
+            ],
+            s: [0.09, 0.08, 0.09],
+            r: [0, random() * Math.PI, 0],
+            c: bloom,
+          });
+      }
+      if (random() < 0.12)
+        s.bushes.push({
+          p: [tx, top + 0.22, tz],
+          s: [0.42, 0.34, 0.42],
+          r: [0, random() * Math.PI, 0],
+          c: pick(random, ["#4fa83f", "#5fb848", "#3f9a3a"]),
+        });
     }
   };
   const addFerns = (
@@ -344,22 +415,36 @@ function buildScenery(low: boolean): Scenery {
       r: [0, 0, -lean],
       c: "#8a6540",
     });
-    const color = pick(random, LEAVES);
-    for (let k = 0; k < 7; k++) {
-      const yaw = (k / 7) * Math.PI * 2 + random() * 0.2,
-        pitch = 0.5 + random() * 0.25,
-        len = 2.1;
+    const color = pick(random, ["#4cb548", "#3fa84a", "#5cc152"]);
+    for (let k = 0; k < 11; k++) {
+      const inner = k >= 7,
+        yaw =
+          ((inner ? k - 7 : k) / (inner ? 4 : 7)) * Math.PI * 2 +
+          random() * 0.25 +
+          (inner ? 0.4 : 0),
+        pitch = inner ? 0.15 + random() * 0.15 : 0.5 + random() * 0.25,
+        len = inner ? 1.5 : 2.3;
       s.leaves.push({
         p: [
           topX + Math.sin(yaw) * Math.cos(pitch) * len * 0.5,
-          topY - Math.sin(pitch) * len * 0.5,
+          topY - Math.sin(pitch) * len * 0.5 + (inner ? 0.12 : 0),
           z + Math.cos(yaw) * Math.cos(pitch) * len * 0.5,
         ],
-        s: [0.55, 0.05, len],
+        s: [inner ? 0.45 : 0.62, 0.05, len],
         r: [pitch, yaw, 0],
-        c: color,
+        c: inner ? "#6fd05e" : color,
       });
     }
+    for (let k = 0; k < 3; k++)
+      s.coconuts.push({
+        p: [
+          topX + Math.sin(k * 2.1) * 0.2,
+          topY - 0.2,
+          z + Math.cos(k * 2.1) * 0.2,
+        ],
+        s: [0.15, 0.15, 0.15],
+        c: "#7a4f2c",
+      });
   };
   // Platform bodies and decoration.
   for (const p of platforms) {
@@ -471,6 +556,11 @@ function buildScenery(low: boolean): Scenery {
       s: [w + 0.14, 0.3, d + 0.14],
       c: pick(random, WILD_GRASS),
     });
+    s.bands.push({
+      p: [x, top - 0.42, z],
+      s: [w - 0.06, 0.26, d - 0.06],
+      c: "#8b6a44",
+    });
     addTufts(x, top, z, w, d, Math.round(w * d * 0.28));
     addFerns(x, top, z, w, d, Math.max(1, Math.round(w * d * 0.12)));
     if (!low)
@@ -564,7 +654,7 @@ function Lagoon({ textures }: { textures: ReturnType<typeof useTextures> }) {
         receiveShadow
       >
         <planeGeometry args={[420, 420]} />
-        <meshStandardMaterial color="#2aa89a" roughness={1} />
+        <meshStandardMaterial color="#1597a8" roughness={1} />
       </mesh>
       <mesh
         position={[75, WATER_Y, -15]}
@@ -574,16 +664,21 @@ function Lagoon({ textures }: { textures: ReturnType<typeof useTextures> }) {
       >
         <planeGeometry args={[420, 420]} />
         <meshStandardMaterial
-          color="#397f83"
           transparent
           opacity={0.9}
-          roughness={0.24}
+          roughness={0.22}
           metalness={0}
-          emissive="#087a80"
-          emissiveIntensity={0}
           depthWrite={false}
-          customProgramCacheKey={() => "water-pbr-v2"}
-          onBeforeCompile={(shader) => waterShader(shader, time.current)}
+          customProgramCacheKey={() => "water-lagoon-v3"}
+          onBeforeCompile={(shader) =>
+            stylizedWater(
+              shader,
+              time.current,
+              { kind: "lagoon" },
+              "#5adbd2",
+              "#129fb8",
+            )
+          }
         />
       </mesh>
     </>
@@ -650,8 +745,23 @@ function Terrain({
   });
   return (
     <>
-      <Instanced geometry={geometries.box} items={scenery.pillars} />
+      <Instanced geometry={geometries.box} items={scenery.pillars}>
+        <meshStandardMaterial
+          roughness={0.92}
+          flatShading
+          customProgramCacheKey={() => "stone-blocks-v1"}
+          onBeforeCompile={stoneBlocks}
+        />
+      </Instanced>
       <Instanced geometry={geometries.box} items={scenery.caps} />
+      <Instanced geometry={geometries.box} items={scenery.bands} />
+      <Instanced
+        geometry={geometries.gem}
+        items={scenery.blossoms}
+        castShadow={false}
+      />
+      <Instanced geometry={geometries.sphere} items={scenery.bushes} />
+      <Instanced geometry={geometries.sphere} items={scenery.coconuts} />
       <Instanced
         geometry={geometries.cone}
         items={scenery.tufts}

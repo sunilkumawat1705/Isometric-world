@@ -6,7 +6,12 @@ import {
   seeded,
 } from "../lib/village/logic";
 import { locations, projects } from "../lib/village/data";
-import { MAX_ZOOM, MIN_ZOOM, useGame } from "../lib/village/store";
+import {
+  DEFAULT_ZOOM,
+  MAX_ZOOM,
+  MIN_ZOOM,
+  useGame,
+} from "../lib/village/store";
 describe("camera-relative movement", () => {
   it("follows the first-person heading while keeping analog movement normalized", () => {
     expect(cameraMovement(0, 1, 0)).toEqual({ x: 0, z: -1 });
@@ -30,15 +35,15 @@ describe("camera-relative movement", () => {
   });
 });
 describe("camera zoom", () => {
-  it("starts at maximum zoom and clamps gesture and button updates", () => {
-    expect(useGame.getState().zoom).toBe(MAX_ZOOM);
+  it("starts at the village-wide zoom and clamps gesture and button updates", () => {
+    expect(useGame.getState().zoom).toBe(DEFAULT_ZOOM);
     useGame.getState().setZoom(20);
     expect(useGame.getState().zoom).toBe(MAX_ZOOM);
     useGame.getState().setZoom(0.1);
     expect(useGame.getState().zoom).toBe(MIN_ZOOM);
     useGame.getState().setZoom(1.8);
     expect(useGame.getState().zoom).toBe(1.8);
-    useGame.getState().setZoom(MAX_ZOOM);
+    useGame.getState().setZoom(DEFAULT_ZOOM);
   });
 });
 describe("jump buffering", () => {

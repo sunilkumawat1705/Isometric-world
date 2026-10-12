@@ -3226,3 +3226,225 @@ button.village-sign-caption {
   width: 10px;
   height: 10px;
 }
+
+/* ------------------------------------------------------------------
+   Forest atmosphere: an out-of-focus forest behind the island, light
+   shafts, drifting leaves and motes in front, and a tilt-shift blur
+   while exploring. All layers are decorative and ignore the pointer.
+   ------------------------------------------------------------------ */
+.village-experience {
+  background:
+    radial-gradient(
+      ellipse 55% 50% at 64% 46%,
+      color-mix(in srgb, var(--village-sky, #2f5b3a) 70%, #6d8f48) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse at 58% 42%,
+      var(--village-sky, #2f5b3a) 0%,
+      #183021 55%,
+      #0d1c13 100%
+    );
+}
+.forest-backdrop,
+.forest-foreground,
+.tilt-shift {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.forest-backdrop svg,
+.forest-near {
+  position: absolute;
+  left: -4%;
+  top: -4%;
+  width: 108%;
+  height: 108%;
+}
+.forest-far {
+  filter: blur(11px);
+  opacity: calc(0.55 + var(--daylight, 1) * 0.4);
+}
+.forest-bokeh {
+  filter: blur(2px);
+  mix-blend-mode: screen;
+  opacity: calc(0.25 + var(--daylight, 1) * 0.75);
+}
+.forest-near {
+  filter: blur(8px);
+  opacity: 0.9;
+}
+.sun-rays {
+  position: absolute;
+  top: -25%;
+  left: 24%;
+  width: 62%;
+  height: 150%;
+  transform: rotate(-30deg);
+  transform-origin: top left;
+  filter: blur(16px);
+  mix-blend-mode: screen;
+  opacity: calc(var(--daylight, 1) * 0.85);
+}
+.sun-rays span {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 232, 168, 0.3),
+    rgba(255, 232, 168, 0.08) 45%,
+    transparent 72%
+  );
+  animation: ray-breathe 9s ease-in-out infinite alternate;
+}
+.sun-rays span:nth-child(1) {
+  left: 2%;
+  width: 9%;
+}
+.sun-rays span:nth-child(2) {
+  left: 16%;
+  width: 4%;
+  animation-delay: -3s;
+}
+.sun-rays span:nth-child(3) {
+  left: 27%;
+  width: 12%;
+  animation-delay: -6s;
+}
+.sun-rays span:nth-child(4) {
+  left: 47%;
+  width: 6%;
+  animation-delay: -2s;
+}
+@keyframes ray-breathe {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.falling-leaf {
+  position: absolute;
+  top: -5%;
+  left: var(--x);
+  width: var(--s);
+  height: calc(var(--s) * 0.55);
+  border-radius: 0 100% 0 100%;
+  background: linear-gradient(135deg, #d6e87c, #86b63d 60%, #5d8f2c);
+  filter: blur(var(--b)) hue-rotate(var(--hue));
+  opacity: calc(0.35 + var(--daylight, 1) * 0.55);
+  animation: leaf-fall var(--d) linear var(--delay) infinite;
+}
+@keyframes leaf-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate3d(4vw, 28vh, 0) rotate(110deg);
+  }
+  50% {
+    transform: translate3d(-1vw, 56vh, 0) rotate(200deg);
+  }
+  75% {
+    transform: translate3d(5vw, 84vh, 0) rotate(290deg);
+  }
+  100% {
+    transform: translate3d(2vw, 112vh, 0) rotate(380deg);
+  }
+}
+.forest-mote {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ffe9a8;
+  box-shadow: 0 0 8px 2px rgba(255, 220, 140, 0.55);
+  opacity: 0;
+  animation: mote-drift var(--d) ease-in-out var(--delay) infinite;
+}
+@keyframes mote-drift {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+  }
+  35% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(1.5vw, -6vh, 0);
+  }
+}
+.reduced-motion .falling-leaf,
+.reduced-motion .forest-mote {
+  display: none;
+}
+.reduced-motion .sun-rays span {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .falling-leaf,
+  .forest-mote {
+    display: none;
+  }
+  .sun-rays span {
+    animation: none;
+  }
+}
+.tilt-shift {
+  display: none;
+}
+.tilt-shift::before,
+.tilt-shift::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.tilt-shift::before {
+  top: 0;
+  height: 30%;
+  -webkit-mask-image: linear-gradient(to bottom, #000 35%, transparent);
+  mask-image: linear-gradient(to bottom, #000 35%, transparent);
+}
+.tilt-shift::after {
+  bottom: 0;
+  height: 26%;
+  -webkit-mask-image: linear-gradient(to top, #000 30%, transparent);
+  mask-image: linear-gradient(to top, #000 30%, transparent);
+}
+@media (min-width: 761px) {
+  .is-exploring:not(.is-first-person):not(.is-in-trial) .tilt-shift {
+    display: block;
+  }
+  .village-vignette {
+    background:
+      linear-gradient(
+        90deg,
+        rgba(11, 25, 16, 0.86) 0%,
+        rgba(11, 25, 16, 0.5) 24%,
+        transparent 46%
+      ),
+      linear-gradient(
+        0deg,
+        rgba(10, 22, 14, 0.55),
+        transparent 18%,
+        transparent 84%,
+        rgba(10, 22, 14, 0.35)
+      );
+  }
+  .is-exploring .village-vignette {
+    background: radial-gradient(
+      ellipse at 50% 55%,
+      transparent 58%,
+      rgba(10, 22, 14, 0.42) 100%
+    );
+  }
+}
